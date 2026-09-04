@@ -1,0 +1,96 @@
+#!/bin/bash
+# scripts-hooks/commit-msg -- destino real: scripts/hooks/commit-msg
+#
+# ATENÇÃO -- este projeto já tem core.hooksPath apontando pra
+# scripts/hooks/ (onde mora um pre-commit real, que confere
+# versionamento dos documentos, ver TASKS.md "Resolvidas"). Copiar
+# este arquivo pra uma pasta .githooks/ separada e rodar
+# `git config core.hooksPath .githooks` DESLIGA esse pre-commit em
+# silêncio -- por isso este arquivo mora numa pasta chamada
+# scripts-hooks/ (não .githooks/), pra deixar claro que o destino é
+# scripts/hooks/, ao lado do pre-commit já existente, nunca um
+# hooksPath separado. Ver MANUAL.md, seção Instalação.
+#
+# Diferente de tudo em .claude/hooks/, isto roda pro git em si -- vale
+# pra qualquer commit, feito pelo Claude Code, por você direto no
+# terminal, ou por qualquer outra ferramenta. Cobre só a parte
+# mecânica do formato (trailer, prefixo, bullet points); a parte de
+# "está em português mesmo" continua exclusiva do revisor do Claude
+# Code, porque isso exige entendimento, não só formato.
+
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+
+if echo "$MSG" | grep -qi "Co-Authored-By"; then
+  echo "Commit rejeitado: mensagem não pode ter 'Co-Authored-By: Claude ...'." >&2
+  exit 1
+fi
+
+TITLE=$(head -n 1 "$MSG_FILE")
+if echo "$TITLE" | grep -Eq '^(docs|fix|feat|chore|refactor|style|test)(\(.+\))?:'; then
+  echo "Commit rejeitado: título não usa prefixo tipo 'docs:'/'fix:' -- direto, imperativo." >&2
+  exit 1
+fi
+
+# CLAUDE.md, Passo 4 do "Fluxo completo de uma tarefa": título "sem
+# prefixo tipo docs:/fix: NEM caminho de arquivo antes de dois-pontos"
+# -- duas proibições distintas na mesma frase. A checagem acima só
+# cobre a primeira (lista fixa de palavras tipo conventional commits);
+# um título como "settings.json: corrige o gancho" passava batido.
+# Padrão: token no início da linha contendo "." ou "/" (cara de nome de
+# arquivo/caminho), seguido de ":" -- checado contra os 50 commits mais
+# recentes do histórico real antes de entrar, sem nenhum falso positivo.
+if echo "$TITLE" | grep -Eq '^[^[:space:]]*[./][^[:space:]]*:'; then
+  echo "Commit rejeitado: título não usa caminho de arquivo antes de dois-pontos -- direto, imperativo." >&2
+  exit 1
+fi
+
+# Commit de merge (título "Merge branch..."/"Merge pull request #N
+# from...") tem corpo gerado pelo git/GitHub -- ex.: o título do PR
+# repetido em texto corrido, sem bullet nenhum. Não é texto escrito à
+# mão seguindo a convenção do projeto, então a checagem de bullet
+# points não se aplica. Achado ao rodar este script contra o
+# histórico real (git log): sem esta isenção, 7 dos 30 commits mais
+# recentes -- todos "Merge pull request #N..." -- seriam rejeitados.
+if echo "$TITLE" | grep -Eq '^Merge (branch|pull request)\b'; then
+  exit 0
+fi
+
+BODY=$(tail -n +3 "$MSG_FILE" | grep -v '^#')
+if [[ -n "$BODY" ]]; then
+  # Achado real, confirmado rodando este script contra "git log" deste
+  # próprio repositório: bullet que quebra em mais de uma linha (comum
+  # aqui, e aceito no histórico real) tem linha de continuação SEM "-"
+  # no início -- ex.: "- Pendência nova em tasks.md: forma exata de\n
+  # SessionState, dos tipos...". Uma checagem que exigisse "-" em toda
+  # linha rejeitaria a maioria dos commits já aceitos deste projeto.
+  # Critério corrigido: só rejeita linha SEM indentação nenhuma que
+  # também não comece com "-"/"*" -- isso é parágrafo solto de verdade
+  # (a "narrativa em prosa corrida" que o CLAUDE.md proíbe). Linha
+  # indentada sem "-" é sempre continuação de um bullet anterior,
+  # nunca narrativa nova -- liberada.
+  #
+  # Segundo achado real, mesmo teste: o próprio CLAUDE.md sanciona uma
+  # exceção -- "bullet final cobrindo como foi testado é aceitável...
+  # ('Testado ao vivo: X, Y, Z')". No histórico real, essa linha final
+  # vem sem "-" (ex.: "Testado: gradlew :core:test, BUILD SUCCESSFUL.").
+  # Uma vez que essa linha aparece, ela (e o resto do corpo, se houver)
+  # é o fechamento sancionado -- para de exigir bullet dali em diante.
+  IN_TRAILING_TESTADO=false
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if $IN_TRAILING_TESTADO; then
+      continue
+    fi
+    if echo "$line" | grep -qiE '^Testado\b'; then
+      IN_TRAILING_TESTADO=true
+      continue
+    fi
+    if echo "$line" | grep -qE '^[^[:space:]]' && ! echo "$line" | grep -qE '^[-*]\s'; then
+      echo "Commit rejeitado: o corpo da mensagem deve ser lista de itens começando com '-', nunca narrativa (linha sem indentação e sem marcador de bullet: \"$line\")." >&2
+      exit 1
+    fi
+  done <<< "$BODY"
+fi
+
+exit 0

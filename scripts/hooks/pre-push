@@ -1,0 +1,30 @@
+#!/bin/bash
+# scripts-hooks/pre-push -- destino real: scripts/hooks/pre-push
+# (mesma pasta do pre-commit já existente -- ver nota completa em
+# scripts-hooks/commit-msg. Nunca mudar core.hooksPath.)
+#
+# Roda antes de qualquer push sair da máquina, de qualquer ferramenta.
+# Bloqueia force-push em develop/main. Pode ser pulado com
+# git push --no-verify -- a garantia que ninguém pula sozinho é a
+# proteção de branch do GitHub (ver MANUAL.md, seção Instalação,
+# passo 4, e configurar-protecao-branch.sh).
+
+remote="$1"
+url="$2"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  BRANCH=$(echo "$remote_ref" | sed 's#refs/heads/##')
+  if [[ "$BRANCH" == "develop" || "$BRANCH" == "main" ]]; then
+    # Push normal (fast-forward) sempre passa; só barra quando o
+    # histórico remoto não é ancestral do que está sendo enviado,
+    # ou seja, quando seria necessário sobrescrever.
+    if [[ "$remote_sha" != "0000000000000000000000000000000000000000" ]]; then
+      if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        echo "Push rejeitado: isso reescreveria o histórico de $BRANCH. Nunca permitido, sem exceção." >&2
+        exit 1
+      fi
+    fi
+  fi
+done
+
+exit 0

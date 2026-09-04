@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Verifica se algum arquivo com campo de versao reconhecido mudou de
+# conteudo sem a versao acompanhar, antes de deixar o commit acontecer.
+#
+# Dois formatos de versao reconhecidos, cada um checado do jeito certo:
+# - Documento markdown com uma linha "| Versão | X.Y.Z |" na tabela de
+#   cabecalho (todo arquivo de modulos/_template/ e os cinco documentos
+#   de docs/docs-VMODEL-visao-geral/ seguem esse formato).
+# - Arquivo *.schema.json com uma chave "schema_version" -- o valor de
+#   verdade costuma morar numa linha "const" logo abaixo da chave
+#   (convencao deste projeto pra fixar o valor exigido, ver PD-IMP-01),
+#   entao a checagem aceita mudanca tanto na linha "schema_version"
+#   quanto numa linha "const" -- sem isso, subir só o valor de "const"
+#   (caso comum, já aconteceu de verdade em
+#   modulos/motor/schemas/pacote-de-conteudo.schema.json) passava pelo
+#   gancho sem aviso nenhum, mesmo sendo mudança de versão real. A
+#   checagem de "schema_version" só entra em arquivos com nome
+#   *.schema.json -- sem essa restrição, qualquer arquivo de código que
+#   apenas cite a string "schema_version" (por exemplo, um `.kt` que lê
+#   esse campo de um JSON, caso real em
+#   modulos/motor/core/.../ContentImport.kt) seria tratado, por engano,
+#   como se fosse ele mesmo um esquema versionado.
+#
+# ADR individual (decisions/000N-titulo.md) fica de fora de proposito:
+# nao leva versao propria -- o historico dela e o campo Status
+# (substituido pelo ADR-NNNN), ver modulos/_template/decisions/README.md.
+
+falhou=0
+
+# -z / -d '' (NUL como separador, nao espaco/quebra de linha) -- sem isso,
+# nome de arquivo com espaco (como os cinco documentos de
+# docs/docs-VMODEL-visao-geral/) quebra em "arquivos" que nao existem, e a
+# checagem passa batido, sem checar nada de verdade.
+#
+# "< <(...)" (substituicao de processo do bash), em vez de "| while", pra
+# o loop rodar no processo atual, nao num processo filho -- assim
+# "falhou=1", setado la dentro, continua valendo depois do loop.
+while IFS= read -r -d '' arquivo; do
+    case "$arquivo" in
+        *decisions/[0-9][0-9][0-9][0-9]-*.md)
+            continue
+            ;;
+    esac
+
+    # arquivo novo (sem versao anterior pra comparar) nao entra na checagem --
+    # o molde ja garante que ele nasce com Versao 0.1.0 certa.
+    if ! git cat-file -e "HEAD:$arquivo" 2>/dev/null; then
+        continue
+    fi
+
+    conteudo_staged=$(git show ":$arquivo" 2>/dev/null)
+
+    tipo=""
+    if printf '%s\n' "$conteudo_staged" | grep -q '^| Versão |'; then
+        tipo="markdown"
+    elif [ "${arquivo%.schema.json}" != "$arquivo" ] && printf '%s\n' "$conteudo_staged" | grep -q '"schema_version"'; then
+        tipo="schema"
+    else
+        continue
+    fi
+
+    diff_arquivo=$(git diff --cached -- "$arquivo")
+    [ -z "$diff_arquivo" ] && continue
+
+    tocou_versao=0
+    if [ "$tipo" = "markdown" ]; then
+        # grep sem -E (modo basico) -- "|" e literal nesse modo, nao
+        # operador de "ou" -- exatamente o que a tabela markdown precisa.
+        # Achado ao vivo: documento que só tem a tabela "Controle de
+        # versão" (sem a linha de campo único "| Versão | X.Y.Z |" na
+        # tabela de cabeçalho -- caso de MANUAL.md, que não tem tabela
+        # de cabeçalho nenhuma) nunca passava nesta checagem, mesmo
+        # subindo a versão de verdade -- porque subir a versão, nesse
+        # tipo de documento, é acrescentar uma linha NOVA na tabela
+        # (ex.: "| 0.4.0 | ... |"), nunca tocar a linha de cabeçalho da
+        # própria tabela ("| Versão | Data | ... |"), que é a única
+        # coisa que o padrão original conseguia enxergar (e que
+        # coincide, por acaso, com o mesmo texto usado no início da
+        # linha de campo único do outro formato). Segunda alternativa
+        # aceita agora: uma linha ACRESCENTADA que comece com
+        # "| X.Y.Z |" (um número de versão dentro da própria tabela de
+        # changelog) também conta como "versão subiu".
+        printf '%s\n' "$diff_arquivo" | grep -Eq '^[+-]\| Versão \|' && tocou_versao=1
+        printf '%s\n' "$diff_arquivo" | grep -Eq '^\+\| *[0-9]+\.[0-9]+\.[0-9]+ *\|' && tocou_versao=1
+    else
+        # grep -E (modo estendido) aqui sim, pra "|" valer como alternancia
+        # de verdade -- precisa casar tanto a linha da chave "schema_version"
+        # quanto a linha "const" do valor (ver comentario no topo do arquivo).
+        printf '%s\n' "$diff_arquivo" | grep -Eq '^[+-].*"(schema_version|const)"' && tocou_versao=1
+    fi
+
+    if [ "$tocou_versao" -eq 0 ]; then
+        echo "aviso: $arquivo mudou de conteudo mas o campo de versao nao acompanhou."
+        falhou=1
+    fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+if [ "$falhou" -eq 1 ]; then
+    echo ""
+    echo "Confira cada arquivo listado acima: se a mudanca e de conteudo real,"
+    echo "suba a versao (campo Versão + tabela Controle de versão, ou"
+    echo "schema_version) antes de commitar. Se for so ajuste cosmetico, sem"
+    echo "mudanca de sentido, pule esse commit especifico com:"
+    echo "  git commit --no-verify"
+    exit 1
+fi
+
+exit 0

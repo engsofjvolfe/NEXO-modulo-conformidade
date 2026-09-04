@@ -1,0 +1,190 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/statusline.sh"
+  },
+  "permissions": {
+    "ask": [
+      "Bash(git merge *)",
+      "Bash(gh pr create *)",
+      "Grep",
+      "Glob",
+      "Agent"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/user_prompt_submit.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Lembrete pos-compactacao: releia o CLAUDE.md e a lista de leitura obrigatoria. Nunca reescrever historico de develop/main -- sem excecao. handoff.md e sempre o ultimo arquivo tocado. Todo trabalho acontece dentro de uma worktree. Nunca usar a pergunta de multipla escolha. Respostas sempre em portugues, sem termo tecnico sem explicar. Julgamento nunca e decidido sozinho -- vira pergunta pro usuario.'"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session_start_reset.sh" },
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session_start_import_check.sh" }
+        ]
+      },
+      {
+        "matcher": "resume",
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session_start_import_check.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_mandatory_reading_guard.sh" },
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_search_guard.sh" }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Regra do projeto: nunca usar a ferramenta de pergunta de multipla escolha, sem excecao.\"}}'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_edit_safety.sh" },
+          {
+            "type": "agent",
+            "timeout": 90,
+            "prompt": "Voce revisa UMA edicao de documento antes dela acontecer (evento PreToolUse, Write ou Edit) -- segunda camada, depois da checagem mecanica que ja rodou. Formato de resposta confirmado por leitura direta da documentacao oficial do Claude Code (Hooks reference, secao Agent-based hooks): sua resposta final PRECISA ser, em stdout, so um destes dois JSON: {\"ok\": true} pra liberar, ou {\"ok\": false, \"reason\": \"<explicacao>\"} pra bloquear -- nunca hookSpecificOutput.permissionDecision, formato de outro tipo de gancho, que este tipo nao interpreta (achado registrado em modulos/conformidade/decisions/0014). Primeiro rode: cat .claude/hooks/state/current-authorization -- se tiver conteudo, imprima {\"ok\": true} e pare aqui. Caso contrario, olhe o file_path e o conteudo novo (tool_input.content pra Write, tool_input.new_string pra Edit) do JSON de entrada ($ARGUMENTS). Quatro julgamentos possiveis, cada um so se aplica dependendo do arquivo: (A) Se o arquivo e modulos/<mod>/docs/concept.md, modulos/<mod>/docs/architecture.md, ou algo em modulos/<mod>/schemas/: o texto novo representa uma escolha real entre pelo menos duas alternativas (nao so 'a unica forma obvia de fazer')? Se sim, existe uma ADR em modulos/<mod>/decisions/ ja cobrindo essa escolha especifica (rode ls modulos/<mod>/decisions/ pra conferir)? Se a escolha e real e nao ha ADR, bloqueie -- checagem mecanica equivalente (pre_edit_safety.sh, itens 14/15) ja cobre boa parte disso; use esse julgamento so pra casos que a heuristica mecanica pode ter deixado passar. (B) Se o arquivo e qualquer .md, exceto se o caminho terminar em docs/analysis.md: o texto novo usa tom pessoal (\"o usuario pediu\", \"decidimos\", \"resolvemos\", narrativa em primeira pessoa sobre a sessao) em vez de fato direto? A checagem mecanica (pre_edit_safety.sh, item 16) so pega uma lista fixa de palavras -- seu papel aqui e pegar tom pessoal escrito de outro jeito, que a lista fixa nao cobre. (C) Se o arquivo e qualquer .md dentro de modulos/<mod>/docs/ ou modulos/<mod>/decisions/: o texto novo repete, com palavras iguais ou diferentes, uma explicacao/narrativa/decisao que ja deveria morar so no documento dono dela (narrativa de investigacao so em analysis.md; alternativas descartadas e motivo de escolha so em decisions/; confirmacao de teste/comportamento so em findings.md; handoff.md nunca descreve o que um documento diz, so aponta com link e frase curta)? Rode grep/ls nos outros arquivos do mesmo modulo atras do mesmo trecho ou ideia central antes de decidir -- nao adivinhe sem olhar. A checagem mecanica (item 17) so cobre handoff.md com linha longa sem link -- seu papel aqui cobre qualquer par de documentos, no repositorio inteiro, sem essa limitacao. (D) Se o arquivo e codigo (implementacao) dentro de modulos/<mod>/, e esse modulo tem mais de um arquivo dentro de modulos/<mod>/schemas/: o codigo novo parece depender de um contrato de dado especifico daquela pasta? Se sim, rode cat .claude/hooks/state/read-log.txt pra conferir se o arquivo de esquema especifico e relevante foi lido nesta sessao. Se nenhum dos quatro julgamentos se aplica a este arquivo especifico, ou se aplicam mas passam limpo, libere. Responda EXATAMENTE: bloqueando, {\"ok\": false, \"reason\": \"qual dos quatro (A, B, C ou D), e o motivo especifico\"}; liberando, {\"ok\": true}. Nao imprima nenhum outro texto fora desse JSON -- so ele, em stdout. $ARGUMENTS"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_hygiene.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(git *)",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_git_rules.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(gh pr create *)",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_git_rules.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(gh pr create *)",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_pr_review_check.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(*preview-up.sh*)",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_preview_check.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/post_edit_track.sh" }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/post_read_track.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(*preview-up.sh*)",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/post_preview_track.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(*preview-down.sh*)",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/post_preview_track.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/post_merge_reminder.sh"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree_create_setup.sh" }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree_remove_cleanup.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/stop_fact_check.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "timeout": 150,
+            "prompt": "Antes de deixar a resposta terminar como tarefa concluida. Formato de resposta confirmado por leitura direta da documentacao oficial do Claude Code (Hooks reference, secao Agent-based hooks): sua resposta final PRECISA ser, em stdout, so um destes dois JSON: {\"ok\": true} pra liberar, ou {\"ok\": false, \"reason\": \"<explicacao>\"} pra continuar a resposta com essa explicacao como proxima instrucao -- nunca hookSpecificOutput.permissionDecision nem hookSpecificOutput.decision, formato de outro tipo de gancho, que este tipo nao interpreta (achado registrado em modulos/conformidade/decisions/0014). Continua marcado como experimental pela documentacao oficial se bloqueia de verdade neste evento -- ver modulos/conformidade/docs/concept.md, Limites reconhecidos. Primeiro rode: cat .claude/hooks/state/current-authorization -- se tiver conteudo, imprima {\"ok\": true} e pare aqui. Caso contrario: confira como FATO se os documentos gerais da raiz (lista de pendencias, resumo de estado, indice de modulos) batem com o que mudou nesta sessao (unico fato que stop_fact_check.sh, que ja rodou antes deste hook, nao cobre -- exige entender o que mudou, nao so olhar um valor). Os fatos puramente mecanicos (worktree sem sobra, git status limpo quando a resposta diz 'pronto', base do PR) ja vieram checados por stop_fact_check.sh, que BLOQUEIA de verdade (exit 2) quando encontra um -- se a resposta chegou ate aqui, nenhum desses tres apareceu; nao recheque do zero. Depois, para cada pergunta de julgamento abaixo, NAO decida sozinho -- use o processo de rascunho/pergunta/verificacao/adversario se achar que sabe a resposta, mas mesmo assim sempre devolva a pergunta pro usuario no reason: o trabalho desta sessao foi significativo o suficiente pro resumo de estado geral da raiz? Se houve merge em develop, precisa ir pra producao agora, ou fica so em develop? A descricao do PR (se houver) esta clara o suficiente, ou vaga? Confira tambem cat .claude/hooks/state/preview-sessions.log se existir -- se o ultimo preview-up/preview-down registrado e anterior ao ultimo item do edit-order.log (ou seja, codigo mudou depois do ultimo teste), pergunte explicitamente se foi testado de novo, nunca presuma que sim. Pergunta de julgamento adicional, mesma regra (nunca decidida sozinha): releia TODAS as mensagens do usuario nesta sessao (transcript em $ARGUMENTS), nao so a ultima -- para cada mensagem que descreveu uma tarefa com detalhe (varios pedidos, condicoes ou observacoes numa mensagem so), liste cada instrucao concreta que ela continha e confirme, uma a uma, se foi de fato atendida nesta resposta ou em alguma anterior da mesma tarefa. Nao presuma completude so porque a resposta final parece caprichada -- instrucao dada no meio de uma mensagem longa e o tipo de coisa que passa batido sem essa releitura item a item. Qualquer instrucao sem confirmacao clara de que foi feita entra no reason, nomeada. Ultima pergunta de julgamento, mesma regra (registrada na secao correspondente do documento normativo do projeto: 'o que nao e fato mecanico continua checagem manual: reler cada arquivo tocado, por completo, contra a propria descricao no topo dele, antes de fechar a entrega'): cada arquivo tocado (via Write ou Edit) nesta sessao foi relido, por completo, e comparado contra a propria descricao/proposito escrito no topo dele -- ou isso foi so presumido? Se algum fato faltar ou pergunta ficar sem resposta, imprima exatamente {\"ok\": false, \"reason\": \"fatos faltando + perguntas, separados\"}. Caso contrario, imprima {\"ok\": true}. Nao imprima nenhum outro texto fora desse JSON -- so ele, em stdout. $ARGUMENTS"
+          },
+          {
+            "type": "agent",
+            "timeout": 180,
+            "prompt": "Voce e o auditor final desta sessao -- segunda opiniao independente, releia tudo do zero, nao reaproveite conclusao de outro hook. Formato de resposta confirmado por leitura direta da documentacao oficial do Claude Code (Hooks reference, secao Agent-based hooks): sua resposta final PRECISA ser, em stdout, so um destes dois JSON: {\"ok\": true} pra liberar, ou {\"ok\": false, \"reason\": \"<explicacao>\"} pra continuar a resposta com essa explicacao como proxima instrucao -- nunca hookSpecificOutput.permissionDecision nem hookSpecificOutput.decision, formato de outro tipo de gancho, que este tipo nao interpreta (achado registrado em modulos/conformidade/decisions/0014). Continua marcado como experimental pela documentacao oficial se bloqueia de verdade neste evento -- ver modulos/conformidade/docs/concept.md, Limites reconhecidos. Primeiro rode: cat .claude/hooks/state/current-authorization -- se tiver conteudo, imprima {\"ok\": true} e pare aqui. Caso contrario, leia o documento de instrucoes do projeto inteiro, do comeco ao fim, na raiz do repositorio -- abra de verdade agora. Para cada regra objetiva, confirme com git status/diff/log/branch/worktree list e o transcript desta sessao (em $ARGUMENTS). Para cada regra de julgamento, gere uma pergunta que desmontaria um 'esta tudo bem' e responda com evidencia real antes de aceitar -- e mesmo assim, devolva pro usuario como pergunta no reason, nunca feche sozinho. Liste toda regra nao seguida ou nao confirmavel, por menor que seja. Se sobrar qualquer coisa, imprima exatamente {\"ok\": false, \"reason\": \"fatos + perguntas de julgamento, cada uma nomeada\"}. Caso contrario, com certeza genuina, imprima {\"ok\": true}. Nao imprima nenhum outro texto fora desse JSON -- so ele, em stdout."
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "timeout": 30,
+            "prompt": "Olhe last_assistant_message. Formato de resposta confirmado por leitura direta da documentacao oficial do Claude Code (Hooks reference, secao Prompt-based hooks): sua resposta final PRECISA ser, em stdout, so um destes dois JSON: {\"ok\": true} pra liberar, ou {\"ok\": false, \"reason\": \"<explicacao>\"} pra continuar a resposta com essa explicacao como proxima instrucao -- nunca hookSpecificOutput.decision, formato de outro tipo de gancho, que este tipo nao interpreta (achado registrado em modulos/conformidade/decisions/0014). Continua marcado como experimental pela documentacao oficial se bloqueia de verdade neste evento. Regras: (1) resposta em portugues, termo tecnico explicado em linguagem simples -- se estiver em duvida se um termo precisava de explicacao, isso e julgamento, trate como violacao (a duvida vira o motivo), pro usuario confirmar, nunca decida sozinho; (2) nenhum emoji em lugar nenhum da resposta -- fato puro, sem julgamento (regra geral do projeto: nunca usar emojis em nada escrito nele, inclusive no chat). Se claramente falta explicar, nao esta em portugues, ou tem emoji, imprima exatamente {\"ok\": false, \"reason\": \"qual termo, ou 'emoji encontrado: <trecho>'\"}. Caso contrario, imprima {\"ok\": true}. Nao imprima nenhum outro texto fora desse JSON -- so ele, em stdout."
+          }
+        ]
+      }
+    ]
+  }
+}

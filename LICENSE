@@ -1,0 +1,52 @@
+NEXO — Módulo de Conformidade — Licença de Uso
+Todos os direitos reservados.
+
+Titular dos direitos: N. Denominado (pseudônimo adotado deliberadamente
+pelo autor do projeto — ver README.md, seção Créditos).
+
+Copyright (c) 2026, N. Denominado. Todos os direitos reservados.
+
+1. Objeto
+
+Esta licença cobre todo o conteúdo deste repositório: documentos de
+conceito, arquitetura, decisões, achados e armadilhas; e todo
+script/configuração que compõe o mecanismo de conformidade em si
+(ganchos, agentes de revisão, checklist).
+
+Este repositório é um recorte, publicado à parte, de um módulo do
+projeto NEXO (ver README.md, seção "Sobre o projeto NEXO") — a mesma
+licença e o mesmo titular de direitos do projeto principal se aplicam
+aqui.
+
+2. Direitos reservados
+
+Nenhuma parte deste repositório — documentos, scripts, ou
+configuração — pode ser copiada, reproduzida, distribuída,
+sublicenciada, modificada, ou usada para criar obra derivada, por
+qualquer meio, sem autorização prévia e por escrito do titular dos
+direitos, concedida caso a caso.
+
+3. Uso não autorizado
+
+O acesso a este repositório (por exemplo, por convite a um ambiente de
+controle de versão privado) não constitui, por si só, licença de uso,
+cópia ou distribuição de seu conteúdo. Qualquer uso fora do
+expressamente autorizado pelo titular constitui violação de direito
+autoral, sujeita às sanções civis e penais previstas na Lei nº 9.610,
+de 19 de fevereiro de 1998 (Lei de Direitos Autorais), e, no que se
+aplica a qualquer código-fonte de software, na Lei nº 9.609, de 19 de
+fevereiro de 1998 (Lei do Software).
+
+4. Ausência de garantia
+
+Este conteúdo é fornecido no estado em que se encontra ("as is"), sem
+garantia de qualquer tipo, expressa ou implícita, incluindo garantias
+de adequação a um propósito específico. O titular dos direitos não se
+responsabiliza por qualquer dano decorrente do uso não autorizado
+deste conteúdo.
+
+5. Contato para autorização
+
+Pedidos de autorização de uso devem ser dirigidos diretamente ao
+titular dos direitos, pelos canais que ele indicar — não existe
+processo de solicitação automatizado.

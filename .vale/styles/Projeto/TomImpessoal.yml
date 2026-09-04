@@ -1,0 +1,7 @@
+extends: existence
+message: "Tom pessoal proibido -- descreva o fato direto, não o pedido/relato ('%s')"
+level: error
+ignorecase: true
+tokens:
+  - 'o (usuário|proprietário) (pediu|relatou)'
+  - 'você (pediu|relatou|disse) (que|para)'

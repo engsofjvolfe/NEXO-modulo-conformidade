@@ -1,0 +1,22 @@
+#!/bin/bash
+# scripts-hooks/pre-rebase -- destino real: scripts/hooks/pre-rebase
+# (mesma pasta do pre-commit já existente -- ver nota completa em
+# scripts-hooks/commit-msg. Nunca mudar core.hooksPath.)
+#
+# git rebase não tem flag --no-verify -- isso torna este hook um
+# pouco mais firme que commit-msg/pre-push (que qualquer um pode
+# pular com --no-verify). Ainda é um hook local: dá pra contornar
+# trocando core.hooksPath ou apagando o arquivo. A garantia de
+# verdade, que ninguém localmente derruba sozinho, é a proteção de
+# branch do GitHub (ver MANUAL.md, seção Instalação, passo 4, e
+# configurar-protecao-branch.sh).
+
+UPSTREAM="$1"
+BRANCH="${2:-$(git branch --show-current)}"
+
+if [[ "$BRANCH" == "develop" || "$BRANCH" == "main" ]]; then
+  echo "Rebase rejeitado: develop e main nunca são reescritas, sem exceção." >&2
+  exit 1
+fi
+
+exit 0
