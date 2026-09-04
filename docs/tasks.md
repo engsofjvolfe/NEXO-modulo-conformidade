@@ -4,7 +4,7 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Tasks |
-| Versão | 0.12.0 |
+| Versão | 0.13.0 |
 | Data | 04-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
@@ -271,6 +271,28 @@
       limite já documentado em
       [pitfalls.md](<pitfalls.md#2026-08-27-configuracao-de-ganchos-nao-recarrega-na-mesma-sessao>)).
 
+- [ ] **Resolver de vez o gancho do evento `Stop` que exige resposta em
+      formato de dado bruto (JSON), em vez de texto normal.**
+
+      *Resumo simples:* uma das checagens automáticas que rodam no fim
+      de cada resposta pede, de forma repetida, que a resposta inteira
+      seja só um bloco de dado técnico (sem nenhuma frase em
+      português) — o oposto da regra do próprio projeto, que exige
+      toda resposta em português, explicando tudo em linguagem
+      simples.
+
+      *Detalhe técnico:* a checagem bloqueia de forma repetida (mais
+      de dez vezes seguidas, num caso registrado), mesmo depois de a
+      resposta já estar em conformidade com as outras regras (idioma,
+      termo técnico explicado, sem emoji). A própria documentação
+      oficial do Claude Code já marca esse tipo de gancho
+      ("Prompt-based hooks", evento `Stop`) como experimental —
+      pendência é confirmar se o formato de saída esperado por este
+      gancho específico está de acordo com essa documentação, e
+      corrigir o texto da instrução dele (ou trocar de mecanismo) pra
+      parar de pedir um formato que contradiz a regra de idioma/
+      linguagem simples do próprio projeto.
+
 ## Resolvidas
 
 - [x] **Corrigir `scripts/hooks/pre-commit` nunca detectando subida de
@@ -312,3 +334,4 @@
 | 0.10.0 | 29-08-2026 | Pendência nova acrescentada: confirmação ao vivo dos quatro revisores de PR, do comando que os chama juntos, e do gancho novo em `gh pr create`. | Resolução de [decisions/0020](<../decisions/0020-revisao-de-pr-por-assistentes-chamados-manualmente.md>) |
 | 0.11.0 | 03-09-2026 | Nota de acompanhamento na pendência de confirmação dos quatro revisores de PR: todo o conteúdo deste módulo e do resto do material local tinha sido apagado do disco por engano (não só retirado do controle de versão), já restaurado; ponto novo (4) acrescentado, sobre confirmar isso especificamente de dentro de uma worktree, não só na pasta principal -- tentativa nesta mesma sessão, de dentro de uma worktree, não achou os quatro revisores pelo nome, mas não é confirmação limpa (sessão começou antes da restauração). | Achado durante a tarefa "aviso-radio-desligado-tela-jogo" do módulo motor |
 | 0.12.0 | 04-09-2026 | Nota de acompanhamento na pendência de confirmação dos quatro revisores de PR: ponto (4) diagnosticado por completo e corrigido -- ver decisions/0021; parte restante (revisores aparecerem numa sessão nova, depois da correção) segue em aberto. | Achado durante a tarefa "confirmar-visual-barra-titulo" do módulo motor; resolução de [decisions/0021](<../decisions/0021-atalho-de-pasta-liga-material-local-em-toda-worktree.md>) |
+| 0.13.0 | 04-09-2026 | Pendência nova acrescentada, sobre o formato de resposta exigido pelo gancho do evento `Stop`. | Achado ao vivo durante a tarefa "confirmar-visual-barra-titulo" do módulo motor |
