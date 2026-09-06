@@ -4,7 +4,7 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Handoff |
-| Versão | 0.16.0 |
+| Versão | 0.17.0 |
 | Data | 04-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
@@ -123,6 +123,9 @@
 - [decisions/0021-atalho-de-pasta-liga-material-local-em-toda-worktree.md](<../decisions/0021-atalho-de-pasta-liga-material-local-em-toda-worktree.md>) —
   worktree nova passa a enxergar `.claude/agents`, `.claude/hooks` e
   `modulos/conformidade` sozinha, por atalho de pasta.
+- [decisions/0022-checagem-do-corpo-do-pr-contra-o-modelo-oficial.md](<../decisions/0022-checagem-do-corpo-do-pr-contra-o-modelo-oficial.md>) —
+  corpo do PR passa a ser conferido contra o modelo oficial antes da
+  abertura.
 - [tasks.md, Em aberto](<tasks.md#em-aberto>) — pendências abertas.
 
 ## Próximo passo
@@ -151,3 +154,4 @@
 | 0.14.0 | 03-09-2026 | Nenhum ponteiro novo (`tasks.md` já citado). Todo o conteúdo deste módulo (e do resto do material local -- `.claude/agents/`, `.claude/hooks/`, `.claude/settings.json`, `scripts/`, `MANUAL.md`, entre outros) tinha sido apagado do disco por engano num commit anterior que devia só retirar do controle de versão -- restaurado a partir do commit pai desse commit. Pendência de confirmação dos quatro revisores de PR ganha ponto novo: confirmar isso especificamente de dentro de uma worktree de tarefa, não só na pasta principal -- ainda sem confirmação, nem a favor nem contra. | Achado durante a tarefa "aviso-radio-desligado-tela-jogo" do módulo motor |
 | 0.15.0 | 04-09-2026 | Acrescentado ponteiro para decisions/0021. | Resolução de [decisions/0021](<../decisions/0021-atalho-de-pasta-liga-material-local-em-toda-worktree.md>) |
 | 0.16.0 | 04-09-2026 | Nenhum ponteiro novo (`decisions/0021` já citada). Os arquivos reais das ferramentas internas (`.claude/agents/`, `.claude/hooks/`, `.claude/settings.json`, `.claude/skills/`, `scripts/`, `MANUAL.md`, `FRASES-DE-CONFIRMACAO.md`, `configurar-protecao-branch.sh`, `.vale.ini`/`.vale/`, `.github/pull_request_template.md`, `.gitattributes`) passam a existir dentro deste mesmo repositório -- antes só existiam na pasta principal do NEXO. Os dois links pra `MANUAL.md`, escritos apontando pra fora do repositório desde a extração, corrigidos pra apontar pra dentro dele. | Nota de acompanhamento em [decisions/0021](<../decisions/0021-atalho-de-pasta-liga-material-local-em-toda-worktree.md>) |
+| 0.17.0 | 04-09-2026 | Acrescentado ponteiro para decisions/0022. | Resolução de [decisions/0022](<../decisions/0022-checagem-do-corpo-do-pr-contra-o-modelo-oficial.md>) |

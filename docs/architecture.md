@@ -4,8 +4,8 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Architecture |
-| Versão | 0.5.0 |
-| Data | 29-08-2026 |
+| Versão | 0.6.0 |
+| Data | 04-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
 > Descreve como o módulo é construído por dentro — layout de arquivos,
@@ -51,9 +51,15 @@ o gancho real que aplica.
   [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>)),
   `pre_search_guard.sh` (guarda de busca ampla genérica, por formato de
   chamada -- qualquer ferramenta com `tool_input.command` -- não por
-  nome de ferramenta), `post_edit_track.sh`, `post_read_track.sh`,
+  nome de ferramenta), `pre_pr_description_check.sh` (confere se o
+  corpo do PR segue o modelo oficial -- ver
+  [decisions/0022](<../decisions/0022-checagem-do-corpo-do-pr-contra-o-modelo-oficial.md>)),
+  `post_edit_track.sh`, `post_read_track.sh`,
   `post_preview_track.sh`, `post_merge_reminder.sh`,
   `stop_fact_check.sh`, `worktree_remove_cleanup.sh`, `statusline.sh`.
+  Dois ganchos existentes (`pre_pr_review_check.sh`,
+  `worktree_create_setup.sh`) ainda faltam nesta lista -- pendência
+  registrada em `tasks.md`, fora do escopo desta rodada.
 - `.claude/hooks/lib/common.sh` -- funções compartilhadas (leitura do
   JSON de entrada, `AUTORIZO-TRAVA`, normalização de caminho, detecção
   de emoji e de esquema impuro, e a ficha/síntese: um resumo compacto
@@ -92,3 +98,4 @@ o gancho real que aplica.
 | 0.2.0 | 28-08-2026 | Layout reescrito direto (sem apontar pras seções antigas de MANUAL.md, que virou um índice por faixa de linha do CLAUDE.md, não mais numerado por seção) -- lista completa dos arquivos reais, incluindo session_start_import_check.sh, novo nesta rodada. | Segunda rodada de correção do sistema de conformidade |
 | 0.4.0 | 28-08-2026 | Acrescentado `pre_preview_check.sh` à lista de arquivos. | Resolução de [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>) |
 | 0.5.0 | 29-08-2026 | Acrescentados os quatro revisores de PR (`.claude/agents/`) e o comando que os chama juntos (`.claude/skills/revisar-pr/`). | Resolução de [decisions/0020](<../decisions/0020-revisao-de-pr-por-assistentes-chamados-manualmente.md>) |
+| 0.6.0 | 04-09-2026 | Acrescentado `pre_pr_description_check.sh`; nota sobre dois ganchos existentes (`pre_pr_review_check.sh`, `worktree_create_setup.sh`) ainda fora desta lista. | Resolução de [decisions/0022](<../decisions/0022-checagem-do-corpo-do-pr-contra-o-modelo-oficial.md>) |

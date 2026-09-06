@@ -4,7 +4,7 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Tasks |
-| Versão | 0.13.0 |
+| Versão | 0.14.0 |
 | Data | 04-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
@@ -293,6 +293,32 @@
       parar de pedir um formato que contradiz a regra de idioma/
       linguagem simples do próprio projeto.
 
+- [ ] **Confirmar de ponta a ponta, numa sessão nova, que
+      `pre_pr_description_check.sh` bloqueia de verdade um PR fora do
+      modelo oficial.**
+
+      *Resumo simples:* a trava nova foi escrita e ligada ao evento
+      certo, mas ainda não foi vista bloqueando um PR de verdade,
+      numa sessão que já carregue o arquivo desde o início.
+
+      *Detalhe técnico:* mesma limitação já registrada nas pendências
+      de confirmação acima -- a sessão que escreve o gancho não
+      consegue ver a configuração de ganchos recarregar sozinha (ver
+      [pitfalls.md](<pitfalls.md#2026-08-27-configuracao-de-ganchos-nao-recarrega-na-mesma-sessao>)).
+
+- [ ] **Completar a lista de ganchos em `architecture.md` com
+      `pre_pr_review_check.sh` e `worktree_create_setup.sh`, cada um
+      com sua própria ADR retroativa.**
+
+      *Resumo simples:* os dois já existem e já funcionam, mas nunca
+      foram acrescentados à lista de arquivos do módulo -- achado ao
+      tentar acrescentar um gancho novo à mesma lista.
+
+      *Detalhe técnico:* mesma categoria já registrada na pendência
+      "Formalizar retroativamente, em `decisions/`, as escolhas
+      estruturais já tomadas antes deste módulo existir como módulo" —
+      candidatas novas pra essa mesma formalização.
+
 ## Resolvidas
 
 - [x] **Corrigir `scripts/hooks/pre-commit` nunca detectando subida de
@@ -335,3 +361,4 @@
 | 0.11.0 | 03-09-2026 | Nota de acompanhamento na pendência de confirmação dos quatro revisores de PR: todo o conteúdo deste módulo e do resto do material local tinha sido apagado do disco por engano (não só retirado do controle de versão), já restaurado; ponto novo (4) acrescentado, sobre confirmar isso especificamente de dentro de uma worktree, não só na pasta principal -- tentativa nesta mesma sessão, de dentro de uma worktree, não achou os quatro revisores pelo nome, mas não é confirmação limpa (sessão começou antes da restauração). | Achado durante a tarefa "aviso-radio-desligado-tela-jogo" do módulo motor |
 | 0.12.0 | 04-09-2026 | Nota de acompanhamento na pendência de confirmação dos quatro revisores de PR: ponto (4) diagnosticado por completo e corrigido -- ver decisions/0021; parte restante (revisores aparecerem numa sessão nova, depois da correção) segue em aberto. | Achado durante a tarefa "confirmar-visual-barra-titulo" do módulo motor; resolução de [decisions/0021](<../decisions/0021-atalho-de-pasta-liga-material-local-em-toda-worktree.md>) |
 | 0.13.0 | 04-09-2026 | Pendência nova acrescentada, sobre o formato de resposta exigido pelo gancho do evento `Stop`. | Achado ao vivo durante a tarefa "confirmar-visual-barra-titulo" do módulo motor |
+| 0.14.0 | 04-09-2026 | Duas pendências novas acrescentadas. | Resolução de [decisions/0022](<../decisions/0022-checagem-do-corpo-do-pr-contra-o-modelo-oficial.md>) |
