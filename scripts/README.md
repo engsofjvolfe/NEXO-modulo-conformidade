@@ -1,16 +1,14 @@
-# Scripts — NEXO (raiz)
+# Scripts
 
 <!-- doc-type: readme -->
 
-Ferramentas de apoio ao repositório, fora do código de qualquer módulo.
+Ferramentas de apoio ao repositório onde este projeto está instalado.
 
 ## Verificação de versão
 
 `hooks/pre-commit` avisa, antes de um commit acontecer, quando um
 documento com campo de versão reconhecido (a tabela "Versão" no
-cabeçalho de todo arquivo de [`modulos/_template/`](../modulos/_template/)
-e dos cinco documentos de
-[`docs/docs-VMODEL-visao-geral/`](../docs/docs-VMODEL-visao-geral/), ou
+cabeçalho de qualquer arquivo markdown que siga esse formato, ou
 `schema_version` num arquivo `*.schema.json`) mudou de conteúdo sem a
 própria versão subir junto. Não decide qual versão nova usar — quem
 decide é sempre quem está commitando, seguindo SemVer; o hook só avisa

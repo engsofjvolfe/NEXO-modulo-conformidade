@@ -1,0 +1,10 @@
+# Registros de sessão (autorizações, o que já foi lido/editado, logs) --
+# gerados em tempo real por quem usa este módulo, nunca parte do
+# módulo em si. Existe aqui porque .claude/hooks/state é sempre
+# resolvido a partir de ${CLAUDE_PROJECT_DIR} (a pasta raiz de quem
+# hospeda este módulo), então, quando essa pasta hospedeira liga
+# .claude/hooks diretamente a este repositório (atalho de pasta, sem
+# duplicar arquivo), state/ passa a existir fisicamente aqui dentro --
+# sem esta linha, esses registros arriscariam ser enviados por engano
+# pro repositório remoto deste módulo.
+.claude/hooks/state/

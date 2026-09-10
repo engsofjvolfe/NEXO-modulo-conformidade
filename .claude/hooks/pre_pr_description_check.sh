@@ -43,7 +43,7 @@ REQUIRED_HEADINGS=(
 
 for heading in "${REQUIRED_HEADINGS[@]}"; do
   if ! echo "$COMMAND" | grep -qF -- "$heading"; then
-    block "Bloqueado: o corpo do PR não segue o modelo do projeto (.github/pull_request_template.md) -- falta a seção '$heading'. Reescreva o corpo com as quatro seções na ordem certa (O que muda, Por quê, Como testar, Checklist do fluxo de documentação). Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+    block "corpo do PR fora do modelo" "o corpo do PR não segue o modelo do projeto (.github/pull_request_template.md) -- falta a seção '$heading'. Reescreva o corpo com as quatro seções na ordem certa (O que muda, Por quê, Como testar, Checklist do fluxo de documentação). Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
   fi
 done
 

@@ -4,8 +4,8 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Findings |
-| Versão | 0.12.0 |
-| Data | 04-09-2026 |
+| Versão | 0.18.0 |
+| Data | 10-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
 > Achados confirmados (por leitura de código, teste ao vivo, ou os dois)
@@ -554,10 +554,460 @@ corretamente, ficava bloqueado pra sempre nesse gancho.
 Correção, alternativas descartadas e bateria de teste completas em
 [decisions/0019](<../decisions/0019-deteccao-de-versao-subida-em-documento-so-com-changelog.md>).
 
+### 2026-09-07-cadeia-do-stop-reavalia-a-sessao-inteira-a-cada-tentativa-sem-registrar-resposta-anterior
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* os quatro ganchos do evento `Stop` (checagem mecânica,
+dois julgamentos por IA, checagem de idioma/termo técnico/emoji)
+parecem reavaliar a sessão inteira do zero a cada vez que o Claude
+tenta encerrar a resposta -- inclusive quando a resposta já responde,
+de forma completa, uma pergunta de julgamento levantada pelo gancho
+anterior. Em vez de reconhecer a resposta nova, o gancho seguinte
+devolveu, de novo, uma pergunta quase idêntica à já respondida,
+gerando um ciclo de várias respostas seguidas sem nenhuma mensagem
+nova de verdade da pessoa aparecendo no meio.
+
+*Em detalhe técnico:* observado numa sessão de recuperação do próprio
+módulo de conformidade (arquivos restaurados do histórico do git,
+depois removidos por engano do repositório remoto -- ver
+[pitfalls.md](<pitfalls.md#2026-09-07-arquivos-do-modulo-somem-do-disco-junto-com-a-remocao-do-remoto>)).
+Depois de uma resposta que respondia, por extenso, a pergunta "qual
+era a intenção da autorização AUTORIZO-TRAVA", o gancho de julgamento
+seguinte devolveu a mesma pergunta ("qual era a intenção precisa da
+autorização"), sem nenhuma indicação de ter considerado a resposta já
+dada. Um dos fatos cobrados por esse mesmo gancho ("nenhum commit foi
+realizado nesta sessão") nunca pode ser satisfeito neste módulo
+específico -- os arquivos de `modulos/conformidade/` são, de
+propósito, excluídos do controle de versão (ver `.gitignore`), então
+"nenhum commit" aqui é o comportamento correto, não indício de
+trabalho incompleto; o gancho não distingue os dois casos. Efeito
+prático: uma tarefa que legitimamente pausa pra esperar decisão da
+pessoa (comportamento pedido explicitamente nesta mesma sessão, ver
+pendência "Avisar sempre que um gancho parar o Claude" em
+[tasks.md](<tasks.md#em-aberto>)) pode ficar presa nesse ciclo em vez
+de chegar até a pessoa. Relacionado diretamente à pendência de
+melhorar o `AUTORIZO-TRAVA` -- a mesma cadeia de ganchos que motivou
+aquela pendência também não tem, hoje, um jeito confiável de saber
+que já entregou a pergunta e está de fato esperando resposta humana,
+em vez de continuar sozinha.
+
+### 2026-09-08-lista-de-leitura-obrigatoria-escrita-direto-no-codigo
+
+**Confirmado por:** leitura de código e teste ao vivo.
+
+*Em resumo:* `MANUAL_MANDATORY_DOCS` (`lib/common.sh`) e `IMPORTS`
+(`session_start_import_check.sh`) continham nome de arquivo escrito à
+mão. Corrigido -- ver
+[decisions/0028](<../decisions/0028-lista-de-leitura-obrigatoria-lida-do-arquivo-de-instrucoes.md>).
+
+*Em detalhe técnico:* `mandatory_reading_doc_paths` testada ao vivo
+contra o `CLAUDE.md` real deste projeto -- as 22 entradas resolvidas
+certinho, caminho completo no mesmo estilo do resto do sistema,
+incluindo os quatro arquivos "README.md" citados em pastas diferentes,
+cada um distinto dos outros três.
+
+### 2026-09-08-lista-de-leitura-obrigatoria-escrita-direto-no-codigo
+
+**Confirmado por:** leitura de código e teste ao vivo.
+
+*Em resumo:* `MANUAL_MANDATORY_DOCS` (`lib/common.sh`) e `IMPORTS`
+(`session_start_import_check.sh`) continham nome de arquivo escrito à
+mão. Corrigido -- ver
+[decisions/0028](<../decisions/0028-lista-de-leitura-obrigatoria-lida-do-arquivo-de-instrucoes.md>).
+
+*Em detalhe técnico:* `mandatory_reading_doc_paths` testada ao vivo
+contra o `CLAUDE.md` real deste projeto -- as 22 entradas resolvidas
+certinho, caminho completo no mesmo estilo do resto do sistema,
+incluindo os quatro arquivos "README.md" citados em pastas diferentes,
+cada um distinto dos outros três.
+
+### 2026-09-08-lista-de-leitura-obrigatoria-escrita-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `MANUAL_MANDATORY_DOCS` (`lib/common.sh`) e `IMPORTS`
+(`session_start_import_check.sh`) continham nome de arquivo escrito à
+mão. Corrigido -- ver
+[decisions/0028](<../decisions/0028-lista-de-leitura-obrigatoria-lida-do-arquivo-de-instrucoes.md>).
+
+### 2026-09-08-caminho-de-worktree-a-ligar-escrito-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `WORKTREE_LINK_PATHS` (`lib/common.sh`) tinha
+`"modulos/conformidade"` escrito à mão -- supunha que todo projeto
+hospedeiro guarda o clone deste módulo exatamente nesse caminho.
+Corrigido: a mesma pasta que uma worktree nova precisa enxergar por
+atalho passa a vir de `internal_tooling_paths` (já lida do
+`.gitignore` do projeto hospedeiro), filtrada só pras entradas que são
+pasta de verdade (atalho de pasta do Windows não serve pra um arquivo
+único).
+
+### 2026-09-08-caminho-de-worktree-a-ligar-escrito-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `WORKTREE_LINK_PATHS` (`lib/common.sh`) tinha
+`"modulos/conformidade"` escrito à mão. Corrigido -- ver
+[decisions/0029](<../decisions/0029-caminho-de-worktree-a-ligar-reaproveita-ferramenta-interna.md>).
+
+### 2026-09-08-caminho-de-worktree-a-ligar-escrito-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `WORKTREE_LINK_PATHS` (`lib/common.sh`) tinha
+`"modulos/conformidade"` escrito à mão. Corrigido -- ver
+[decisions/0029](<../decisions/0029-caminho-de-worktree-a-ligar-reaproveita-ferramenta-interna.md>).
+
+### 2026-09-08-caminho-de-worktree-a-ligar-escrito-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `WORKTREE_LINK_PATHS` (`lib/common.sh`) tinha
+`"modulos/conformidade"` escrito à mão. Corrigido -- ver
+[decisions/0029](<../decisions/0029-caminho-de-worktree-a-ligar-reaproveita-ferramenta-interna.md>).
+
+### 2026-09-08-negacao-de-cat-quebrou-checagem-de-autorizacao-nos-ganchos-de-ia
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* os três pontos deste módulo que usam uma segunda
+inteligência artificial pra julgar ficaram incapazes de checar
+`AUTORIZO-TRAVA` depois da negação de `cat` (decisions/0024, mesma
+sessão) -- a própria instrução deles usava `cat` pra isso. Corrigido
+-- ver [decisions/0030](<../decisions/0030-ganchos-de-ia-usam-read-em-vez-de-cat-pra-checar-autorizacao.md>).
+
+*Em detalhe técnico:* reproduzido ao vivo -- edição de documento
+bloqueada pelo julgamento C (conteúdo duplicado) mesmo depois de
+`AUTORIZO-TRAVA` digitado de verdade, várias vezes seguidas.
+
+### 2026-09-08-caminho-de-worktree-a-ligar-escrito-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `WORKTREE_LINK_PATHS` (`lib/common.sh`) tinha
+`"modulos/conformidade"` escrito à mão. Corrigido -- ver
+[decisions/0029](<../decisions/0029-caminho-de-worktree-a-ligar-reaproveita-ferramenta-interna.md>).
+
+### 2026-09-09-bloqueio-do-evento-stop-repetia-sem-fim-esperando-a-pessoa
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* um bloqueio do evento `Stop` cuja resposta só a pessoa
+conduzindo a sessão sabia (autorização pendente, pergunta de
+julgamento) se repetia sem parar, gerando resposta atrás de resposta,
+enquanto ela não respondia -- nunca ficava genuinamente parado,
+esperando. Corrigido -- ver
+[decisions/0033](<../decisions/0033-bloqueio-que-so-a-pessoa-resolve-pergunta-uma-vez-so.md>).
+
+*Em detalhe técnico:* reproduzido ao vivo, dezenas de vezes seguidas
+na mesma sessão -- cada resposta mínima ("sem instrução nova")
+disparava o mesmo bloqueio de novo, sem nenhuma mensagem real da
+pessoa no meio.
+
+### 2026-09-09-bloqueio-do-evento-stop-repetia-sem-fim-esperando-a-pessoa
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* um bloqueio do evento `Stop` cuja resposta só a pessoa
+conduzindo a sessão sabia (autorização pendente, pergunta de
+julgamento) se repetia sem parar, gerando resposta atrás de resposta,
+enquanto ela não respondia -- nunca ficava genuinamente parado,
+esperando. Corrigido -- ver
+[decisions/0033](<../decisions/0033-bloqueio-que-so-a-pessoa-resolve-pergunta-uma-vez-so.md>).
+
+*Em detalhe técnico:* reproduzido ao vivo, dezenas de vezes seguidas
+na mesma sessão -- cada resposta mínima ("sem instrução nova")
+disparava o mesmo bloqueio de novo, sem nenhuma mensagem real da
+pessoa no meio.
+
+### 2026-09-09-bloqueio-do-evento-stop-repetia-sem-fim-esperando-a-pessoa
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* um bloqueio do evento `Stop` cuja resposta só a pessoa
+conduzindo a sessão sabia (autorização pendente, pergunta de
+julgamento) se repetia sem parar, gerando resposta atrás de resposta,
+enquanto ela não respondia -- nunca ficava genuinamente parado,
+esperando. Corrigido -- ver
+[decisions/0033](<../decisions/0033-bloqueio-que-so-a-pessoa-resolve-pergunta-uma-vez-so.md>).
+
+*Em detalhe técnico:* reproduzido ao vivo, dezenas de vezes seguidas
+na mesma sessão -- cada resposta mínima ("sem instrução nova")
+disparava o mesmo bloqueio de novo, sem nenhuma mensagem real da
+pessoa no meio.
+
+### 2026-09-10-copias-fisicas-entre-modulo-e-raiz-nunca-recebiam-correcao
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* toda correção feita neste módulo ao longo de uma sessão
+inteira, incluindo o mecanismo de pergunta feita uma vez só
+(decisions/0033), nunca chegou a valer de verdade -- porque só a cópia
+dentro de `modulos/conformidade/` foi editada, nunca o arquivo real que
+o Claude Code lê na raiz do projeto hospedeiro
+(`.claude/settings.json`). Investigando o alcance, o mesmo problema
+apareceu em mais quatro pontos (`.claude/skills/revisar-pr`,
+`.github/pull_request_template.md`, `.vale.ini`/`.vale/styles`,
+`scripts/`) -- todos cópia física separada entre módulo e raiz, ao
+contrário de `.claude/hooks/`/`.claude/agents/` (atalho de pasta de
+verdade, decisions/0025). Corrigido -- ver
+[decisions/0034](<../decisions/0034-copia-de-settings-json-sincronizada-no-inicio-de-cada-sessao.md>).
+
+*Em detalhe técnico:* `diff`/`cmp` entre cada par de arquivos confirmou
+divergência real em todos os seis itens (o de `settings.json` era o
+mais grave: ainda usava `cat` em vez da ferramenta Read, decisions/0030,
+e não tinha o mecanismo de decisions/0033). Link simbólico de arquivo
+testado ao vivo, falhou por exigir privilégio de administrador (erro
+`NewItemSymbolicLinkElevationRequired`); hard link testado ao vivo,
+funcionou tecnicamente mas descartado por risco de quebra silenciosa
+em atualização do repositório do módulo; atalho de pasta inteira pra
+`.github/`/`scripts/`/`.claude/skills/` descartado por tirar do
+projeto hospedeiro a liberdade de conteúdo próprio nessas pastas -- ver
+decisions/0034 pro raciocínio completo.
+
+### 2026-09-10-vigia-auditor-preso-em-cascata-de-leitura-obrigatoria
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* o vigia auditor do evento `Stop` (segunda inteligência
+artificial, sem nenhuma leitura prévia registrada) travou tentando ler
+o `CLAUDE.md` do projeto hospedeiro e a transcrição da sessão, porque
+os dois estavam sujeitos à mesma exigência de leitura obrigatória
+pensada pra sessão principal -- satisfazendo só mais um item da lista
+por chamada, numa lista longa o bastante pra parecer sem fim. Corrigido
+-- ver
+[decisions/0035](<../decisions/0035-leitura-obrigatoria-libera-claude-md-e-transcricao-sempre.md>).
+
+### 2026-09-10-pre-git-rules-bloqueia-commit-legitimo-com-cwd-desatualizado
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* reproduzido de propósito um relato de outra sessão, nunca
+antes confirmado: `pre_git_rules.sh` bloqueia um commit legítimo, numa
+branch de tarefa, achando que a branch ativa é `develop`. Causa: o
+campo "pasta atual" que o Claude Code entrega ao gancho não acompanha
+um `cd` escrito dentro do próprio comando -- só a ferramenta
+`EnterWorktree` move a sessão de verdade. Sem correção de código --
+comportamento correto do gancho, dado um jeito de trabalhar (`cd`
+manual) que este projeto já não recomenda. Ver
+[pitfalls.md](<pitfalls.md#2026-09-10-cwd-do-gancho-nao-acompanha-cd-dentro-do-proprio-comando>).
+
+*Em detalhe técnico:* worktree de tarefa criada com `git worktree add`
+(fora de `EnterWorktree`, de propósito, pra manter a sessão na pasta
+principal); commit tentado com `cd <worktree> && git commit ...` num
+comando só -- bloqueado, mensagem "commit direto em develop/main",
+mesmo a branch de destino real sendo a da worktree. Worktree e branch
+de teste removidas depois, sem deixar rastro.
+
+### 2026-09-10-git-rev-parse-acha-raiz-do-proprio-repositorio-nao-do-hospedeiro
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* `git rev-parse --show-toplevel`, rodado de dentro da
+pasta deste projeto pra tentar descobrir a raiz do projeto hospedeiro,
+acha a raiz DESTE projeto -- porque ele tem repositório git próprio,
+separado. Descartado como forma de detectar a raiz hospedeira; ver
+[decisions/0036](<../decisions/0036-localizacao-de-instalacao-livre-marcador-substitui-caminho-fixo.md>)
+pra alternativa escolhida (`$(pwd)` no momento da instalação, rodada
+da raiz hospedeira).
+
+*Em detalhe técnico:* achado escrevendo `scripts/instalar.sh` --
+`RAIZ_DIR="$(git -C "$MODULO_DIR" rev-parse --show-toplevel)"`
+devolvia o caminho da própria pasta deste projeto, não o do projeto
+hospedeiro que a contém, confirmado ao comparar os dois caminhos
+diretamente.
+
+### 2026-09-10-comentarios-de-scripts-hooks-pre-commit-citavam-caminho-do-projeto-hospedeiro
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* a checagem de versão em `scripts/hooks/pre-commit` já era
+genérica (nenhum caminho específico embutido na lógica), mas os
+comentários citavam exemplos do projeto onde este projeto foi usado
+pela primeira vez (`modulos/_template/`, `docs/docs-VMODEL-visao-geral/`,
+arquivos específicos de outro módulo) -- generalizados, sem citar
+nenhum caminho de projeto específico.
+
+### 2026-09-10-pre-git-rules-bloqueia-commit-legitimo-com-cwd-desatualizado
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* reproduzido de propósito um relato de outra sessão, nunca
+antes confirmado: `pre_git_rules.sh` bloqueia um commit legítimo, numa
+branch de tarefa, achando que a branch ativa é `develop`. Causa: o
+campo "pasta atual" que o Claude Code entrega ao gancho não acompanha
+um `cd` escrito dentro do próprio comando -- só a ferramenta
+`EnterWorktree` move a sessão de verdade. Sem correção de código --
+comportamento correto do gancho, dado um jeito de trabalhar (`cd`
+manual) que este projeto já não recomenda. Ver
+[pitfalls.md](<pitfalls.md#2026-09-10-cwd-do-gancho-nao-acompanha-cd-dentro-do-proprio-comando>).
+
+*Em detalhe técnico:* worktree de tarefa criada com `git worktree add`
+(fora de `EnterWorktree`, de propósito, pra manter a sessão na pasta
+principal); commit tentado com `cd <worktree> && git commit ...` num
+comando só -- bloqueado, mensagem "commit direto em develop/main",
+mesmo a branch de destino real sendo a da worktree. Worktree e branch
+de teste removidas depois, sem deixar rastro.
+
+### 2026-09-10-git-rev-parse-acha-raiz-do-proprio-repositorio-nao-do-hospedeiro
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* `git rev-parse --show-toplevel`, rodado de dentro da
+pasta deste projeto pra tentar descobrir a raiz do projeto hospedeiro,
+acha a raiz DESTE projeto -- porque ele tem repositório git próprio,
+separado. Descartado como forma de detectar a raiz hospedeira; ver
+[decisions/0036](<../decisions/0036-localizacao-de-instalacao-livre-marcador-substitui-caminho-fixo.md>)
+pra alternativa escolhida (`$(pwd)` no momento da instalação, rodada
+da raiz hospedeira).
+
+*Em detalhe técnico:* achado escrevendo `scripts/instalar.sh` --
+`RAIZ_DIR="$(git -C "$MODULO_DIR" rev-parse --show-toplevel)"`
+devolvia o caminho da própria pasta deste projeto, não o do projeto
+hospedeiro que a contém, confirmado ao comparar os dois caminhos
+diretamente.
+
+### 2026-09-10-comentarios-de-scripts-hooks-pre-commit-citavam-caminho-do-projeto-hospedeiro
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* a checagem de versão em `scripts/hooks/pre-commit` já era
+genérica (nenhum caminho específico embutido na lógica), mas os
+comentários citavam exemplos do projeto onde este projeto foi usado
+pela primeira vez (`modulos/_template/`, `docs/docs-VMODEL-visao-geral/`,
+arquivos específicos de outro módulo) -- generalizados, sem citar
+nenhum caminho de projeto específico.
+
+*Em detalhe técnico:* reproduzido ao vivo, várias chamadas seguidas do
+mesmo vigia, cada uma bloqueada exigindo o próximo documento da lista.
+
+### 2026-09-08-lista-de-leitura-obrigatoria-escrita-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `MANUAL_MANDATORY_DOCS` (`lib/common.sh`) e `IMPORTS`
+(`session_start_import_check.sh`) continham nome de arquivo escrito à
+mão. Corrigido -- ver
+[decisions/0028](<../decisions/0028-lista-de-leitura-obrigatoria-lida-do-arquivo-de-instrucoes.md>).
+
+### 2026-09-08-negacao-de-cat-quebrou-checagem-de-autorizacao-nos-ganchos-de-ia
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* os três pontos deste módulo que usam uma segunda
+inteligência artificial pra julgar ficaram incapazes de checar
+`AUTORIZO-TRAVA` depois da negação de `cat` (decisions/0024, mesma
+sessão) -- a própria instrução deles usava `cat` pra isso. Corrigido
+-- ver [decisions/0030](<../decisions/0030-ganchos-de-ia-usam-read-em-vez-de-cat-pra-checar-autorizacao.md>).
+
+*Em detalhe técnico:* reproduzido ao vivo -- edição de documento
+bloqueada pelo julgamento C (conteúdo duplicado) mesmo depois de
+`AUTORIZO-TRAVA` digitado de verdade, várias vezes seguidas.
+
+### 2026-09-08-caminho-de-worktree-a-ligar-escrito-direto-no-codigo
+
+**Confirmado por:** leitura de código.
+
+*Em resumo:* `WORKTREE_LINK_PATHS` (`lib/common.sh`) tinha
+`"modulos/conformidade"` escrito à mão. Corrigido -- ver
+[decisions/0029](<../decisions/0029-caminho-de-worktree-a-ligar-reaproveita-ferramenta-interna.md>).
+
+### 2026-09-09-bloqueio-do-evento-stop-repetia-sem-fim-esperando-a-pessoa
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* um bloqueio do evento `Stop` cuja resposta só a pessoa
+conduzindo a sessão sabia (autorização pendente, pergunta de
+julgamento) se repetia sem parar, gerando resposta atrás de resposta,
+enquanto ela não respondia -- nunca ficava genuinamente parado,
+esperando. Corrigido -- ver
+[decisions/0033](<../decisions/0033-bloqueio-que-so-a-pessoa-resolve-pergunta-uma-vez-so.md>).
+
+*Em detalhe técnico:* reproduzido ao vivo, dezenas de vezes seguidas
+na mesma sessão -- cada resposta mínima ("sem instrução nova")
+disparava o mesmo bloqueio de novo, sem nenhuma mensagem real da
+pessoa no meio.
+
+### 2026-09-10-copias-fisicas-entre-modulo-e-raiz-nunca-recebiam-correcao
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* toda correção feita neste módulo ao longo de uma sessão
+inteira, incluindo o mecanismo de pergunta feita uma vez só
+(decisions/0033), nunca chegou a valer de verdade -- porque só a cópia
+dentro de `modulos/conformidade/` foi editada, nunca o arquivo real que
+o Claude Code lê na raiz do projeto hospedeiro
+(`.claude/settings.json`). Investigando o alcance, o mesmo problema
+apareceu em mais quatro pontos (`.claude/skills/revisar-pr`,
+`.github/pull_request_template.md`, `.vale.ini`/`.vale/styles`,
+`scripts/`) -- todos cópia física separada entre módulo e raiz, ao
+contrário de `.claude/hooks/`/`.claude/agents/` (atalho de pasta de
+verdade, decisions/0025). Corrigido -- ver
+[decisions/0034](<../decisions/0034-copia-de-settings-json-sincronizada-no-inicio-de-cada-sessao.md>).
+
+*Em detalhe técnico:* `diff`/`cmp` entre cada par de arquivos confirmou
+divergência real em todos os seis itens (o de `settings.json` era o
+mais grave: ainda usava `cat` em vez da ferramenta Read, decisions/0030,
+e não tinha o mecanismo de decisions/0033). Link simbólico de arquivo
+testado ao vivo, falhou por exigir privilégio de administrador (erro
+`NewItemSymbolicLinkElevationRequired`); hard link testado ao vivo,
+funcionou tecnicamente mas descartado por risco de quebra silenciosa
+em atualização do repositório do módulo; atalho de pasta inteira pra
+`.github/`/`scripts/`/`.claude/skills/` descartado por tirar do
+projeto hospedeiro a liberdade de conteúdo próprio nessas pastas -- ver
+decisions/0034 pro raciocínio completo.
+
+### 2026-09-10-vigia-auditor-preso-em-cascata-de-leitura-obrigatoria
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* o vigia auditor do evento `Stop` (segunda inteligência
+artificial, sem nenhuma leitura prévia registrada) travou tentando ler
+o `CLAUDE.md` do projeto hospedeiro e a transcrição da sessão, porque
+os dois estavam sujeitos à mesma exigência de leitura obrigatória
+pensada pra sessão principal -- satisfazendo só mais um item da lista
+por chamada, numa lista longa o bastante pra parecer sem fim. Corrigido
+-- ver
+[decisions/0035](<../decisions/0035-leitura-obrigatoria-libera-claude-md-e-transcricao-sempre.md>).
+
+*Em detalhe técnico:* reproduzido ao vivo, várias chamadas seguidas do
+mesmo vigia, cada uma bloqueada exigindo o próximo documento da lista.
+
+### 2026-09-08-isencao-de-leitura-obrigatoria-nao-normalizava-barra-invertida
+
+**Confirmado por:** teste ao vivo.
+
+*Em resumo:* a isenção de leitura obrigatória pra arquivo/comando
+dentro da ferramenta interna (`command_touches_internal_tooling`,
+consultada por `pre_mandatory_reading_guard.sh`) comparava o caminho
+recebido pela ferramenta sem normalizar barra invertida do Windows --
+`Read`/`Write`/`Edit` chegam com barra invertida (`H:\...\modulos\
+conformidade\...`), mas a lista lida do `.gitignore` usa barra normal.
+A isenção nunca batia pra essas três ferramentas, bloqueando o próprio
+módulo que deveria estar isento -- só `Bash` escapava do defeito, e só
+quando o comando digitado já usava barra normal.
+
+*Em detalhe técnico:* reproduzido ao vivo -- `Read` de um arquivo
+dentro de `modulos/conformidade/` bloqueado, exigindo a leitura manual
+obrigatória do projeto hospedeiro (sem relação com este módulo).
+Corrigido em `pre_mandatory_reading_guard.sh`: `ALVO_FERRAMENTA` passa
+por `normalize_path()` antes da comparação. Segundo ponto corrigido no
+mesmo trabalho: a isenção saía do script inteiro (`exit 0`) assim que
+reconhecia um caminho da ferramenta interna -- isso também pulava, por
+engano, a checagem de frescor de leitura parcial (ver
+[decisions/0023](<../decisions/0023-frescor-por-tokens-estimados-substitui-janela-por-numero-de-acoes.md>)),
+que deve valer sem exceção nenhuma, inclusive dentro deste módulo. A
+isenção passa a valer só pra exigência de leitura obrigatória do
+projeto hospedeiro, nunca pra regra geral de frescor.
+
 ## Controle de versão
 
 | Versão | Data | Alteração | Origem da alteração |
 |---|---|---|---|
+| 0.14.0 | 08-09-2026 | Achado novo registrado: lista de leitura obrigatória escrita direto no código quebrava o agnosticismo do módulo, em dois pontos (lib/common.sh, session_start_import_check.sh); rastrear leitura só pelo nome do arquivo (sem a pasta) tinha risco real de colisão. | Correção de agnosticismo da lista de leitura obrigatória |
+| 0.13.0 | 08-09-2026 | Achado novo registrado: isenção de leitura obrigatória não normalizava barra invertida do Windows, nunca batendo pra Read/Write/Edit; isenção também pulava, por engano, a checagem de frescor de leitura parcial. | Resolução de [decisions/0023](<../decisions/0023-frescor-por-tokens-estimados-substitui-janela-por-numero-de-acoes.md>) |
 | 0.1.0 | 27-08-2026 | Criação inicial -- dois achados registrados. | Criação inicial do módulo |
 | 0.2.0 | 27-08-2026 | Achado novo registrado (teste isolado da restrição de Read). | Segunda rodada de correção do sistema de conformidade |
 | 0.3.0 | 28-08-2026 | Dois achados novos registrados (checagens de emoji/esquema/licença/antes-depois no momento da edição; auto-portão de pre_commit_hygiene.sh). | Correção da falha aberta do filtro `if` |

@@ -29,13 +29,13 @@ fi
 LAST_EDIT=$(tail -n 1 "$EDIT_LOG" | awk '{print $1}')
 
 if [[ ! -s "$PR_REVIEW_LOG" ]]; then
-  block "Bloqueado: nenhuma revisão de PR (comando /revisar-pr) registrada nesta sessão -- rode /revisar-pr antes de abrir o PR. Se já revisou de outro jeito, use AUTORIZO-TRAVA: <motivo>."
+  block "revisão de PR faltando" "nenhuma revisão de PR (comando /revisar-pr) registrada nesta sessão -- rode /revisar-pr antes de abrir o PR. Se já revisou de outro jeito, use AUTORIZO-TRAVA: <motivo>."
 fi
 
 LAST_REVIEW=$(tail -n 1 "$PR_REVIEW_LOG" | awk '{print $1}')
 
 if [[ "$LAST_REVIEW" < "$LAST_EDIT" ]]; then
-  block "Bloqueado: a última revisão de PR (/revisar-pr) é anterior à última edição desta tarefa -- algo mudou depois da revisão. Rode /revisar-pr de novo, ou, se a mudança não afeta o que os revisores checam, use AUTORIZO-TRAVA: <motivo>."
+  block "revisão de PR desatualizada" "a última revisão de PR (/revisar-pr) é anterior à última edição desta tarefa -- algo mudou depois da revisão. Rode /revisar-pr de novo, ou, se a mudança não afeta o que os revisores checam, use AUTORIZO-TRAVA: <motivo>."
 fi
 
 exit 0

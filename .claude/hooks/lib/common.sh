@@ -13,13 +13,14 @@
 STATE_DIR="${CLAUDE_PROJECT_DIR}/.claude/hooks/state"
 AUTH_FILE="${STATE_DIR}/current-authorization"
 CONFIRM_DIR="${STATE_DIR}/confirmations"
+PENDING_QUESTION_DIR="${STATE_DIR}/pending-question"
 OVERRIDES_LOG="${STATE_DIR}/overrides.log"
 EDIT_LOG="${STATE_DIR}/edit-order.log"
 PREVIEW_LOG="${STATE_DIR}/preview-sessions.log"
 PR_REVIEW_LOG="${STATE_DIR}/pr-review-log.txt"
 SYNTHESIS_FILE="${STATE_DIR}/synthesis.json"
 
-mkdir -p "$STATE_DIR" "$CONFIRM_DIR"
+mkdir -p "$STATE_DIR" "$CONFIRM_DIR" "$PENDING_QUESTION_DIR"
 
 # --- Síntese (estado atual, não o diário) ---------------------------
 #
@@ -208,7 +209,7 @@ synthesis_reset() {
 # confirmado por teste real.
 require_jq() {
   if ! command -v jq >/dev/null 2>&1; then
-    block "Bloqueado: jq não está instalado -- todo hook deste projeto depende dele pra ler o JSON de entrada, e sem ele as checagens não travam nada de verdade (silêncio, não segurança). Instale jq (ver MANUAL.md, seção Instalação) antes de continuar."
+    block "jq ausente" "jq não está instalado -- todo hook deste projeto depende dele pra ler o JSON de entrada, e sem ele as checagens não travam nada de verdade (silêncio, não segurança). Instale jq (ver MANUAL.md, seção Instalação) antes de continuar."
   fi
 }
 
@@ -254,6 +255,58 @@ confirmation_confirmed() {
 no_finding_confirmed() { confirmation_confirmed "no-finding"; }
 no_adr_confirmed() { confirmation_confirmed "no-adr"; }
 
+# Um bloqueio do evento Stop cuja resposta só a pessoa que conduz a
+# sessão sabe (autorização pendente, pergunta de julgamento) não deve
+# se repetir sozinho: o evento Stop, quando bloqueado, obriga a
+# resposta a continuar -- e continuar dispara o mesmo evento Stop de
+# novo, no mesmo bloqueio, sem nenhuma mensagem nova da pessoa no meio
+# -- um laço que só termina quando ela responde, mas que a mantém
+# esperando enquanto isso, porque cada volta do laço ainda escreve
+# alguma coisa. Corrigido: cada ponto de bloqueio desse tipo pergunta
+# uma vez, marca que já perguntou, e libera (nunca bloqueia de novo)
+# enquanto a marca existir -- ela só é apagada quando uma mensagem
+# nova de verdade chega (user_prompt_submit.sh), momento em que faz
+# sentido perguntar de novo, porque a mensagem nova pode ter mudado a
+# situação. Não se aplica a bloqueio que a própria resposta consegue
+# corrigir sozinha (ex.: emoji no texto) -- esses continuam
+# bloqueando toda vez, porque insistir faz sentido quando quem decide
+# sou eu mesmo, não a pessoa.
+question_already_asked() {
+  local nome="$1"
+  [[ -s "${PENDING_QUESTION_DIR}/${nome}" ]]
+}
+
+mark_question_asked() {
+  local nome="$1" motivo="$2"
+  echo "$motivo" > "${PENDING_QUESTION_DIR}/${nome}"
+}
+
+# Um bloqueio do evento Stop cuja resposta só a pessoa que conduz a
+# sessão sabe (autorização pendente, pergunta de julgamento) não deve
+# se repetir sozinho: o evento Stop, quando bloqueado, obriga a
+# resposta a continuar -- e continuar dispara o mesmo evento Stop de
+# novo, no mesmo bloqueio, sem nenhuma mensagem nova da pessoa no meio
+# -- um laço que só termina quando ela responde, mas que a mantém
+# esperando enquanto isso, porque cada volta do laço ainda escreve
+# alguma coisa. Corrigido: cada ponto de bloqueio desse tipo pergunta
+# uma vez, marca que já perguntou, e libera (nunca bloqueia de novo)
+# enquanto a marca existir -- ela só é apagada quando uma mensagem
+# nova de verdade chega (user_prompt_submit.sh), momento em que faz
+# sentido perguntar de novo, porque a mensagem nova pode ter mudado a
+# situação. Não se aplica a bloqueio que a própria resposta consegue
+# corrigir sozinha (ex.: emoji no texto) -- esses continuam
+# bloqueando toda vez, porque insistir faz sentido quando quem decide
+# sou eu mesmo, não a pessoa.
+question_already_asked() {
+  local nome="$1"
+  [[ -s "${PENDING_QUESTION_DIR}/${nome}" ]]
+}
+
+mark_question_asked() {
+  local nome="$1" motivo="$2"
+  echo "$motivo" > "${PENDING_QUESTION_DIR}/${nome}"
+}
+
 # Windows usa "\" como separador de caminho; as checagens deste projeto
 # comparam substring com "/" (padrão Unix, usado nas regras do
 # CLAUDE.md). Sem normalizar, uma checagem como '"$CWD" contém
@@ -281,68 +334,107 @@ paths_equal() {
   [[ "${a,,}" == "${b,,}" ]]
 }
 
-# Lista de leitura obrigatória (CLAUDE.md, seção "Leitura obrigatória,
-# fonte da verdade"). Só os 6 documentos de "LEITURA MANUAL
-# OBRIGATÓRIA" entram nesta checagem -- os outros 16, importados
-# automaticamente via "@caminho" no próprio CLAUDE.md, já chegam
-# garantidos pelo mecanismo do Claude Code assim que a sessão começa,
-# sem chamada de Read nenhuma. Checar os 16 contra o read-log.txt
-# bloquearia toda sessão bem-comportada (nenhuma precisa reler algo
-# que já veio automaticamente) -- só os 6 manuais existem justamente
-# porque o auto-import falha pra eles (espaço no nome do arquivo, ver
-# TASKS.md), então só eles exigem um Read explícito de verdade.
+# Lista de leitura obrigatória -- lida direto do arquivo de instruções
+# do projeto hospedeiro (o arquivo que o próprio Claude Code já
+# reconhece, em qualquer projeto: "CLAUDE.md", na raiz ou dentro de
+# ".claude/"), nunca escrita à mão aqui dentro. O projeto hospedeiro
+# marca o trecho relevante com duas linhas fixas (ver
+# CONFORMIDADE_LEITURA_MARCADOR_INICIO/FIM abaixo); sem essas marcações,
+# a lista vem vazia e este mecanismo simplesmente não exige nada --
+# recurso que cada projeto liga por conta própria, nunca uma lista fixa
+# deste módulo.
 #
-# Função compartilhada porque o Portão pro Passo 2 do fluxo completo
-# ("nenhuma linha de código escrita antes disso, e a leitura
-# obrigatória já feita de verdade") exige essa checagem ANTES da
-# primeira edição, não só no commit -- antes, só pre_commit_hygiene.sh
-# conferia isso, tarde demais (dava pra editar dezenas de arquivos sem
-# nunca ter lido nada).
-MANUAL_MANDATORY_DOCS=(
-  "1 - documento-de-conceito-geral.md"
-  "2 - requisitos-conceito-geral.md"
-  "3 - especificacao-conceito-geral.md"
-  "4 - projeto-arquitetonico.md"
-  "5 - projeto-detalhado.md"
-  "prompt model.txt"
-)
+# Dentro do trecho marcado, dois formatos coexistem, cada um com seu
+# próprio tratamento (distinção por sintaxe, não por nome de arquivo):
+# - link markdown ("[texto](caminho)") -- documento que precisa de
+#   leitura manual (ferramenta Read) de verdade.
+# - "@caminho" -- convenção do próprio Claude Code pra importação
+#   automática de contexto no início da sessão, sem chamada de Read.
+CONFORMIDADE_LEITURA_MARCADOR_INICIO='<!-- conformidade-leitura-obrigatoria-inicio -->'
+CONFORMIDADE_LEITURA_MARCADOR_FIM='<!-- conformidade-leitura-obrigatoria-fim -->'
 
-# Janela de frescor (em número de ações da ficha) só dos seis
-# documentos de leitura manual obrigatória -- diferente da janela de
-# pre_edit_safety.sh (citação de documento, ainda 20 ações). As duas
-# eram a mesma constante (20) até esta rodada; separadas porque o
-# julgamento por trás de cada uma é diferente: citar um documento por
-# nome é um evento pontual, vale checar bem de perto; já ter lido os
-# seis documentos manuais é uma condição de fundo, que precisa
-# aguentar uma sessão inteira de trabalho -- inclusive um recarregamento
-# de contexto no meio do caminho (evento "resume" do Claude Code), que
-# não é decisão de ninguém, só o jeito como a ferramenta funciona por
-# trás das cenas. Valor bem maior (pedido explícito: "pra bastante
-# tempo") pra que isso não expire à toa no meio de uma sessão longa.
-# Ver decisions/0015.
-MANDATORY_READ_FRESHNESS_WINDOW=500
+# Devolve, por stdout, o texto entre as duas marcações acima, de
+# dentro do primeiro arquivo de instruções do projeto hospedeiro
+# encontrado (raiz, depois ".claude/"). Vazio se nenhum dos dois
+# existir, ou se as marcações não estiverem presentes ali.
+mandatory_reading_section() {
+  local candidato
+  for candidato in "${CLAUDE_PROJECT_DIR}/CLAUDE.md" "${CLAUDE_PROJECT_DIR}/.claude/CLAUDE.md"; do
+    [[ -f "$candidato" ]] || continue
+    awk -v inicio="$CONFORMIDADE_LEITURA_MARCADOR_INICIO" -v fim="$CONFORMIDADE_LEITURA_MARCADOR_FIM" '
+      $0 == inicio { dentro=1; next }
+      $0 == fim { dentro=0 }
+      dentro { print }
+    ' "$candidato"
+    return 0
+  done
+}
+
+# Nome de cada arquivo citado como link markdown dentro do trecho
+# marcado -- exige leitura manual, tratado como qualquer outro arquivo
+# do projeto a partir daí (mesma regra de frescor por token, sem
+# exceção -- ver decisions/0023).
+mandatory_reading_manual_docs() {
+  mandatory_reading_section | grep -oE '\]\(<?[^)>]+>?\)' | sed -E 's/^\]\(<?//; s/>?\)$//' | while IFS= read -r caminho; do
+    basename "$caminho"
+  done
+}
+
+# Caminho de cada importação automática ("@caminho") dentro do trecho
+# marcado.
+mandatory_reading_auto_imports() {
+  mandatory_reading_section | grep -oE '@\S+' | sed -E 's/^@//'
+}
 
 # Devolve, por stdout, o primeiro documento de leitura manual
-# obrigatória ainda sem rastro de leitura *fresca* (dentro da janela
-# acima) nesta sessão. Consulta a ficha (síntese), nunca relendo o
-# diário inteiro. Vazio se todos os seis foram lidos, e de forma
-# fresca.
-#
-# Antes, esta checagem usava synthesis_age sem limite -- uma leitura
-# feita uma vez, há muitas ações atrás, contava como "lido" pro resto
-# da sessão inteira. Corrigido: nenhuma leitura vale "pra sempre" --
-# a pergunta certa é sempre "li de fresco o bastante pra confiar
-# agora?", o mesmo princípio que já valia só pra citação de documento
-# (pre_edit_safety.sh #4). Os seis documentos manuais deixam de ser
-# exceção -- perdem a permanência que tinham antes, mesma janela do
-# resto do sistema. Ver decisions/0013.
+# obrigatória ainda sem leitura completa *fresca* (por tokens
+# estimados, decisions/0023) nesta sessão. Consulta a ficha (síntese),
+# nunca relendo o diário inteiro. Vazio se todos foram lidos, de forma
+# fresca -- ou se a lista veio vazia (projeto hospedeiro não usa este
+# recurso).
 first_unread_mandatory_doc() {
-  for doc in "${MANUAL_MANDATORY_DOCS[@]}"; do
-    if ! synthesis_fresh "leitura.${doc}" "$MANDATORY_READ_FRESHNESS_WINDOW"; then
+  local doc
+  while IFS= read -r doc; do
+    [[ -z "$doc" ]] && continue
+    if ! synthesis_fresh_bytes "leitura_bytes.${doc}" "$TRANSCRIPT" "$LIMIAR_TOKENS_FRESCOR"; then
       echo "$doc"
       return 0
     fi
-  done
+  done < <(mandatory_reading_manual_docs)
+}
+
+# Um caminho de importação automática tem rastro de conteúdo real no
+# arquivo de transcrição desta sessão? "O arquivo existe no disco" e "o
+# conteúdo de fato entrou na conversa" são coisas diferentes -- o
+# mecanismo de importação em si acontece dentro do próprio Claude Code,
+# antes de qualquer gancho rodar, sem chamada de ferramenta pra
+# interceptar; a única forma mecânica disponível de checar o segundo
+# fato é procurar um trecho conhecido do conteúdo dentro da
+# transcrição bruta. Usa a primeira linha não vazia do arquivo como
+# trecho de busca -- suficiente pra confirmar presença, sem exigir
+# leitura do arquivo inteiro aqui dentro do gancho.
+auto_import_loaded() {
+  local caminho="$1" transcript="$2" arquivo trecho
+  arquivo="${CLAUDE_PROJECT_DIR}/${caminho}"
+  [[ -f "$arquivo" ]] || return 1
+  [[ -f "$transcript" ]] || return 1
+  trecho=$(grep -m1 -E '\S' "$arquivo")
+  [[ -z "$trecho" ]] && return 0
+  grep -qF -- "$trecho" "$transcript" 2>/dev/null
+}
+
+# Devolve, por stdout, o primeiro caminho de importação automática sem
+# rastro de conteúdo na transcrição desta sessão. Vazio se todos têm
+# rastro -- ou se a lista veio vazia.
+first_unloaded_auto_import() {
+  local caminho
+  while IFS= read -r caminho; do
+    [[ -z "$caminho" ]] && continue
+    if ! auto_import_loaded "$caminho" "$TRANSCRIPT"; then
+      echo "$caminho"
+      return 0
+    fi
+  done < <(mandatory_reading_auto_imports)
 }
 
 # Padrão de emoji, compartilhado entre pre_edit_safety.sh (no momento
@@ -404,30 +496,208 @@ log_override() {
   echo "$(date -u +%FT%TZ) [$1] $2" >> "$OVERRIDES_LOG"
 }
 
-# Bloqueia a ação atual com uma mensagem explicando o porquê.
+# Aviso acrescentado automaticamente a todo bloqueio (ver block(),
+# abaixo) -- nunca escrito à mão em cada chamada, pra nunca ficar
+# esquecido num gancho novo ou numa mensagem editada às pressas. Falado
+# com o Claude (quem lê isto primeiro, direto na saída da ferramenta),
+# não com a pessoa -- é o Claude quem precisa repassar, em poucas
+# palavras, pra pessoa decidir.
+BLOCK_REMINDER="Claude: conte isso pra pessoa, em poucas palavras, e pare -- nunca tente contornar, nunca decida sozinho que é engano. Só a pessoa destrava, escrevendo a frase de autorização na própria mensagem dela -- você nunca escreve essa frase."
+
+# Bloqueia a ação atual com uma mensagem explicando o porquê. O aviso
+# acima entra sozinho, sempre -- quem chama block() nunca precisa (nem
+# deve) repetir essa parte.
 block() {
-  echo "$1" >&2
+  echo "$1 $BLOCK_REMINDER" >&2
   exit 2
 }
 
-# Pastas locais deste projeto -- fora do controle de versão, ver
-# .gitignore -- que uma worktree nova precisa enxergar pra funcionar de
-# verdade: as definições dos quatro agentes de revisão de PR
-# (.claude/agents), os próprios scripts de gancho e seu estado
-# compartilhado (.claude/hooks) e a documentação do módulo de
-# conformidade (modulos/conformidade). "git worktree add" só traz
-# conteúdo versionado -- nenhuma das três chega numa worktree nova
-# sozinha. Achado ao vivo: mesmo assim, os ganchos do evento Stop
-# configurados em .claude/settings.json (só existe na pasta principal)
-# disparavam normalmente de dentro de uma worktree sem nenhuma dessas
-# pastas -- confirmando que ${CLAUDE_PROJECT_DIR} já resolve pra pasta
-# principal em qualquer worktree; o problema real é mais estreito:
-# só os caminhos usados sem esse prefixo (referência relativa dentro
-# do próprio texto de um gancho, ex.: "cat .claude/hooks/state/...",
-# e a lista de agentes nomeados que o Claude Code carrega olhando a
-# pasta atual, não CLAUDE_PROJECT_DIR) ficavam sem efeito numa
-# worktree. Ver modulos/conformidade/decisions/0021.
-WORKTREE_LINK_PATHS=(".claude/agents" ".claude/hooks" "modulos/conformidade")
+# Caminhos deste módulo e do resto da ferramenta interna do projeto --
+# a mesma lista do bloco "Ferramentas internas de trabalho desta sessao"
+# do .gitignore, com o mesmo motivo por trás: edição aqui nunca depende
+# da leitura obrigatória do NEXO (a cascata V-Model do produto -- ver
+# CLAUDE.md), porque este módulo tem sua própria documentação e seu
+# próprio processo de escrita, independente do produto que ele
+# fiscaliza. Continua exigindo, do mesmo jeito, a leitura obrigatória
+# quando o trabalho é sobre o NEXO em si (motor, docs gerais da raiz,
+# etc.) -- a isenção é só pra este conjunto de caminhos.
+INTERNAL_TOOLING_PATHS=(
+  "modulos/conformidade" ".claude" "scripts" "MANUAL.md"
+  "FRASES-DE-CONFIRMACAO.md" "configurar-protecao-branch.sh"
+  ".vale.ini" ".vale" ".gitattributes"
+  ".github/pull_request_template.md"
+)
+
+# Um caminho de arquivo/pasta é parte da ferramenta interna acima?
+# Compara prefixo, depois de normalizar barra e remover barra inicial
+# (caminho pode chegar absoluto, ex. "H:/.../modulos/conformidade/x", ou
+# relativo, ex. "modulos/conformidade/x" -- checa só o final relevante).
+is_internal_tooling_path() {
+  local caminho rel
+  caminho=$(normalize_path "$1")
+  [[ -z "$caminho" ]] && return 1
+  for rel in "${INTERNAL_TOOLING_PATHS[@]}"; do
+    case "$caminho" in
+      "$rel"|"$rel"/*|*"/${rel}"|*"/${rel}"/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+# Mesma checagem, pra um comando Bash inteiro (não um único caminho) --
+# usada quando a ferramenta é "Bash", em vez de "Read"/"Write"/"Edit"
+# com um "file_path" só. Aceita se QUALQUER caminho da lista aparecer em
+# algum lugar do texto do comando -- mais solto que is_internal_tooling_path
+# de propósito (um comando pode ter vários argumentos, redirecionamento,
+# pipe; exigir que o comando inteiro comece com o caminho bloquearia
+# comandos legítimos como "cd modulos/conformidade && ...", "ls -la
+# .claude/hooks", "diff a b" com "a"/"b" dentro de .claude/).
+command_touches_internal_tooling() {
+  local comando="$1" rel
+  [[ -z "$comando" ]] && return 1
+  for rel in "${INTERNAL_TOOLING_PATHS[@]}"; do
+    case "$comando" in
+      *"$rel"*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+# Caminhos deste módulo e do resto da ferramenta interna do projeto --
+# lidos direto do bloco "Ferramentas internas de trabalho desta sessao"
+# do .gitignore (mesma fonte única já usada por ensure_worktree_links
+# em espírito -- nenhuma lista própria escrita aqui dentro do script,
+# só uma leitura). Motivo da isenção: edição aqui nunca depende da
+# leitura obrigatória do projeto hospedeiro, porque este módulo tem sua
+# própria documentação e seu próprio processo de escrita, independente
+# do que ele fiscaliza -- a isenção é só pra este conjunto de caminhos,
+# nunca pro resto do projeto hospedeiro.
+internal_tooling_paths() {
+  local gitignore="${CLAUDE_PROJECT_DIR}/.gitignore"
+  [[ -f "$gitignore" ]] || return 0
+  awk '
+    /^# Ferramentas internas de trabalho desta sessao/ { dentro=1; next }
+    dentro && /^$/ { exit }
+    dentro && /^\// { sub(/^\//, ""); sub(/\/$/, ""); print }
+  ' "$gitignore"
+}
+
+# Um caminho de arquivo/pasta é parte da ferramenta interna acima?
+# Compara prefixo, depois de normalizar barra (caminho pode chegar
+# absoluto, ex. "H:/.../modulos/conformidade/x", ou relativo, ex.
+# "modulos/conformidade/x" -- checa só o final relevante).
+is_internal_tooling_path() {
+  local caminho rel
+  caminho=$(normalize_path "$1")
+  [[ -z "$caminho" ]] && return 1
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    case "$caminho" in
+      "$rel"|"$rel"/*|*"/${rel}"|*"/${rel}"/*) return 0 ;;
+    esac
+  done < <(internal_tooling_paths)
+  return 1
+}
+
+# Mesma checagem, pra um comando Bash inteiro (não um único caminho) --
+# usada quando a ferramenta é "Bash", em vez de "Read"/"Write"/"Edit"
+# com um "file_path" só. Aceita se QUALQUER caminho da lista aparecer em
+# algum lugar do texto do comando -- mais solto que is_internal_tooling_path
+# de propósito (um comando pode ter vários argumentos, redirecionamento,
+# pipe; exigir que o comando inteiro comece com o caminho bloquearia
+# comandos legítimos como "cd modulos/conformidade && ...", "ls -la
+# .claude/hooks", "diff a b" com "a"/"b" dentro de .claude/).
+command_touches_internal_tooling() {
+  local comando="$1" rel
+  [[ -z "$comando" ]] && return 1
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    case "$comando" in
+      *"$rel"*) return 0 ;;
+    esac
+  done < <(internal_tooling_paths)
+  return 1
+}
+
+# Só as entradas de internal_tooling_paths que são pasta de verdade em
+# disco -- atalho de pasta do Windows (junction) não serve pra um
+# arquivo único (ex.: .claude/settings.json, também citado no mesmo
+# bloco do .gitignore).
+worktree_link_paths() {
+  local rel
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    [[ -d "${CLAUDE_PROJECT_DIR}/${rel}" ]] && echo "$rel"
+  done < <(internal_tooling_paths)
+}
+
+# Só as entradas de internal_tooling_paths que são pasta de verdade em
+# disco -- atalho de pasta do Windows (junction) não serve pra um
+# arquivo único (ex.: .claude/settings.json, também citado no mesmo
+# bloco do .gitignore).
+worktree_link_paths() {
+  local rel
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    [[ -d "${CLAUDE_PROJECT_DIR}/${rel}" ]] && echo "$rel"
+  done < <(internal_tooling_paths)
+}
+
+# Caminhos deste módulo e do resto da ferramenta interna do projeto --
+# lidos direto do bloco "Ferramentas internas de trabalho desta sessao"
+# do .gitignore (mesma fonte única já usada por ensure_worktree_links
+# em espírito -- nenhuma lista própria escrita aqui dentro do script,
+# só uma leitura). Motivo da isenção: edição aqui nunca depende da
+# leitura obrigatória do projeto hospedeiro, porque este módulo tem sua
+# própria documentação e seu próprio processo de escrita, independente
+# do que ele fiscaliza -- a isenção é só pra este conjunto de caminhos,
+# nunca pro resto do projeto hospedeiro.
+internal_tooling_paths() {
+  local gitignore="${CLAUDE_PROJECT_DIR}/.gitignore"
+  [[ -f "$gitignore" ]] || return 0
+  awk '
+    /^# Ferramentas internas de trabalho desta sessao/ { dentro=1; next }
+    dentro && /^$/ { exit }
+    dentro && /^\// { sub(/^\//, ""); sub(/\/$/, ""); print }
+  ' "$gitignore"
+}
+
+# Um caminho de arquivo/pasta é parte da ferramenta interna acima?
+# Compara prefixo, depois de normalizar barra (caminho pode chegar
+# absoluto, ex. "H:/.../modulos/conformidade/x", ou relativo, ex.
+# "modulos/conformidade/x" -- checa só o final relevante).
+is_internal_tooling_path() {
+  local caminho rel
+  caminho=$(normalize_path "$1")
+  [[ -z "$caminho" ]] && return 1
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    case "$caminho" in
+      "$rel"|"$rel"/*|*"/${rel}"|*"/${rel}"/*) return 0 ;;
+    esac
+  done < <(internal_tooling_paths)
+  return 1
+}
+
+# Mesma checagem, pra um comando Bash inteiro (não um único caminho) --
+# usada quando a ferramenta é "Bash", em vez de "Read"/"Write"/"Edit"
+# com um "file_path" só. Aceita se QUALQUER caminho da lista aparecer em
+# algum lugar do texto do comando -- mais solto que is_internal_tooling_path
+# de propósito (um comando pode ter vários argumentos, redirecionamento,
+# pipe; exigir que o comando inteiro comece com o caminho bloquearia
+# comandos legítimos como "cd modulos/conformidade && ...", "ls -la
+# .claude/hooks", "diff a b" com "a"/"b" dentro de .claude/).
+command_touches_internal_tooling() {
+  local comando="$1" rel
+  [[ -z "$comando" ]] && return 1
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    case "$comando" in
+      *"$rel"*) return 0 ;;
+    esac
+  done < <(internal_tooling_paths)
+  return 1
+}
 
 # Cria, se ainda não existir, um atalho de pasta (junction do Windows --
 # ao contrário de link simbólico, não exige privilégio de administrador
@@ -461,7 +731,8 @@ ensure_worktree_links() {
   esac
 
   local rel target link target_win link_win
-  for rel in "${WORKTREE_LINK_PATHS[@]}"; do
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
     target="${CLAUDE_PROJECT_DIR}/${rel}"
     link="${wt_path}/${rel}"
     [[ -e "$target" ]] || continue
@@ -470,5 +741,5 @@ ensure_worktree_links() {
     link_win=$(cygpath -w "$link" 2>/dev/null) || continue
     powershell.exe -NoProfile -Command "New-Item -ItemType Junction -Path '${link_win}' -Target '${target_win}'" >/dev/null 2>&1
     echo "$(date -u +%FT%TZ) ${rel} -> ${target_win} (worktree ${wt_path})" >> "${STATE_DIR}/worktree-links.log"
-  done
+  done < <(worktree_link_paths)
 }

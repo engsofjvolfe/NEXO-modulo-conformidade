@@ -4,8 +4,8 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Concept |
-| Versão | 0.4.0 |
-| Data | 29-08-2026 |
+| Versão | 0.5.0 |
+| Data | 10-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
 > Descreve o desenho pretendido do módulo — o que ele deve ser e como
@@ -55,10 +55,12 @@ duas coisas juntas, no mesmo arquivo, evita o risco já confirmado uma
 vez neste módulo: um documento que descreve o sistema pode ficar
 desatualizado ou até errado sobre o que o código realmente faz (ver
 [findings.md](findings.md)), enquanto o comentário dentro do próprio
-gancho não tem como divergir de si mesmo. `MANUAL.md` (raiz) existe,
-mas com outro papel: não descreve o sistema por cima do código, é um
-checklist -- cada faixa de linha do `CLAUDE.md` marcada contra o
-gancho real que a aplica, prova de cobertura, não narrativa.
+gancho não tem como divergir de si mesmo. Um projeto hospedeiro pode
+manter, do lado de fora deste módulo, um checklist próprio cruzando
+cada faixa de linha do `CLAUDE.md` dele contra o gancho real que a
+aplica -- prova de cobertura, não narrativa, nunca distribuído junto
+deste módulo por ser sempre específico de cada projeto (ver
+[`COMO-USAR.md`, Prática recomendada](<../COMO-USAR.md#prática-recomendada-fora-do-que-o-módulo-checa-sozinho>)).
 
 Dentro do escopo: qualquer regra do `CLAUDE.md` que dê pra checar como
 fato objetivo (existe o arquivo? o texto bate com o padrão proibido?
@@ -160,3 +162,5 @@ ao vivo, fora do modo automático, em [tasks.md](tasks.md).
 | 0.2.0 | 27-08-2026 | Limites reconhecidos: terceiro ponto acrescentado (bloqueio real do evento `Stop` por gancho `agent`/`prompt`, mecanismo experimental sem confirmação oficial). | Resolução de [decisions/0008](<../decisions/0008-formato-de-bloqueio-nos-ganchos-de-julgamento-do-stop.md>) |
 | 0.3.0 | 28-08-2026 | Limites reconhecidos, terceiro ponto reescrito: formato de resposta de todo gancho `agent`/`prompt` corrigido (era o formato de um gancho comum, por engano); dois ganchos `agent` removidos por completo; acrescentado o limite de acesso a ferramenta depender do modo automático da sessão, confirmado ao vivo. | Resolução de [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>) |
 | 0.4.0 | 29-08-2026 | Escopo acrescido: revisão de PR por julgamento, feita por assistentes chamados manualmente. | Resolução de [decisions/0020](<../decisions/0020-revisao-de-pr-por-assistentes-chamados-manualmente.md>) |
+| 0.5.0 | 10-09-2026 | Escopo descreve o checklist de cobertura como prática recomendada de cada projeto hospedeiro, nunca arquivo distribuído com este módulo. | Resolução de [decisions/0034](<../decisions/0034-copia-de-settings-json-sincronizada-no-inicio-de-cada-sessao.md>) |
+| 0.5.0 | 10-09-2026 | Escopo descreve o checklist de cobertura como prática recomendada de cada projeto hospedeiro, nunca arquivo distribuído com este módulo. | Resolução de [decisions/0034](<../decisions/0034-copia-de-settings-json-sincronizada-no-inicio-de-cada-sessao.md>) |

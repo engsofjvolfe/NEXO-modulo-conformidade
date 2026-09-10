@@ -54,7 +54,7 @@ for mod in $MODULOS_COM_CODIGO; do
   CONCEPT_TOCADO=false; [[ -n "$(synthesis_age "edicao.${MOD_NOME}.concept")" ]] && CONCEPT_TOCADO=true
   ARCH_TOCADO=false; [[ -n "$(synthesis_age "edicao.${MOD_NOME}.architecture")" ]] && ARCH_TOCADO=true
   if ! $CONCEPT_TOCADO && ! $ARCH_TOCADO; then
-    block "Sinalizado: $mod tem código alterado nesta sessão, mas nem o documento de conceito nem o de arquitetura desse módulo foram tocados -- CLAUDE.md, Passo 3: documentação vem antes do teste. Se a mudança realmente não precisa de documentação nova, use AUTORIZO-TRAVA: <motivo>; senão, escreva a documentação antes de testar."
+    block "documentação antes do teste" "$mod tem código alterado nesta sessão, mas nem o documento de conceito nem o de arquitetura desse módulo foram tocados -- CLAUDE.md, Passo 3: documentação vem antes do teste. Se a mudança realmente não precisa de documentação nova, use AUTORIZO-TRAVA: <motivo>; senão, escreva a documentação antes de testar."
   fi
 done
 

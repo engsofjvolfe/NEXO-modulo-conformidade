@@ -8,34 +8,23 @@ COMMAND=$(field '.tool_input.command')
 CWD=$(field '.cwd')
 TRANSCRIPT=$(field '.transcript_path')
 
-# Auto-portão: o campo "if" do settings.json (matcher Bash, condição
-# "Bash(git commit *)") já deveria restringir este script a rodar só
-# quando o comando é mesmo um "git commit" -- mas a documentação
-# oficial confirma que esse filtro FALHA ABERTO (roda o gancho mesmo
-# sem bater o padrão) sempre que o comando não é totalmente parseável
-# pelo mecanismo interno do Claude Code, o que comandos compostos,
-# com aspas aninhadas ou heredoc, disparam com facilidade. Achado ao
-# vivo nesta sessão: um comando qualquer, sem nenhum "git commit",
-# disparou este script mesmo assim, e a checagem de emoji (item 2b)
-# bloqueou um comando que não tinha nada a ver com commit. Sem este
-# auto-portão, todo comando Bash da sessão paga o custo (e o risco de
-# bloqueio falso) das checagens abaixo, que assumem staged diff e
-# mensagem de commit reais. Não depende do "if" pra estar correto --
-# só pra não rodar à toa quando o "if" funciona.
+# Auto-portão: confirma de novo que o comando é um "git commit" real,
+# sem depender só do filtro "if" do settings.json (que falha aberto em
+# comando composto ou com aspas aninhadas).
 if ! echo "$COMMAND" | grep -Eq '\bgit[[:space:]]+commit\b'; then
   exit 0
 fi
 
 # 1) Trailer proibido -- fato de texto, sem exceção possível
 if echo "$COMMAND" | grep -qi "Co-Authored-By"; then
-  block "Bloqueado: a mensagem de commit não pode ter a linha 'Co-Authored-By: Claude ...'."
+  block "trailer proibido" "a mensagem de commit não pode ter a linha 'Co-Authored-By: Claude ...'."
 fi
 
 # 2) Emoji em qualquer arquivo do commit -- fato de texto, sem exceção.
 # Segunda conferência, no commit: pre_edit_safety.sh #9 já bloqueia
 # isso no momento da própria edição (ver lá o motivo do LC_ALL).
 if git -C "$CWD" diff --cached -U0 2>/dev/null | has_emoji; then
-  block "Bloqueado: encontrei um emoji num arquivo que entraria neste commit."
+  block "emoji" "encontrei um emoji num arquivo que entraria neste commit."
 fi
 
 # 2b) Emoji na MENSAGEM do commit em si -- achado na releitura linha
@@ -45,7 +34,7 @@ fi
 # olha o diff dos arquivos -- esta olha o comando "git commit" em si,
 # onde o texto da mensagem aparece de verdade (-m "..." ou heredoc).
 if echo "$COMMAND" | has_emoji; then
-  block "Bloqueado: encontrei um emoji na própria mensagem do commit."
+  block "emoji" "encontrei um emoji na própria mensagem do commit."
 fi
 
 # 3) Pureza de esquemas -- fato de texto, sem exceção. Segunda
@@ -55,7 +44,7 @@ SCHEMA_FILES=$(git -C "$CWD" diff --cached --name-only -- '*/schemas/*.json' 'sc
 if [[ -n "$SCHEMA_FILES" ]]; then
   for f in $SCHEMA_FILES; do
     if git -C "$CWD" show ":$f" 2>/dev/null | grep -Eq '"description"|"example"'; then
-      block "Bloqueado: $f tem campo 'description' ou 'example'. Esquema de dado carrega só dado puro."
+      block "esquema puro" "$f tem campo 'description' ou 'example'. Esquema de dado carrega só dado puro."
     fi
   done
 fi
@@ -70,7 +59,7 @@ fi
 MD_FILES_SCHEMA=$(git -C "$CWD" diff --cached --name-only -- '*.md' 2>/dev/null)
 for f in $MD_FILES_SCHEMA; do
   if git -C "$CWD" show ":$f" 2>/dev/null | schema_block_impure; then
-    block "Bloqueado: $f tem um bloco de esquema embutido (cercado por \`\`\`yaml ou \`\`\`json) com campo 'description' ou 'example'. Esquema de dado carrega só dado puro, mesmo embutido num documento."
+    block "esquema puro" "$f tem um bloco de esquema embutido (cercado por \`\`\`yaml ou \`\`\`json) com campo 'description' ou 'example'. Esquema de dado carrega só dado puro, mesmo embutido num documento."
   fi
 done
 
@@ -87,10 +76,14 @@ fi
 # first_unread_mandatory_doc em lib/common.sh pro motivo de não checar
 # os 16 auto-importados aqui). Reforço: pre_edit_safety.sh já barra
 # isso antes da primeira edição (Portão pro Passo 2); esta é a
-# segunda conferência, no commit.
-UNREAD_DOC=$(first_unread_mandatory_doc)
-if [[ -n "$UNREAD_DOC" ]]; then
-  block "Bloqueado: não encontrei rastro de leitura (via Read) de '$UNREAD_DOC' nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+# segunda conferência, no commit. Não se aplica a commit dentro do
+# módulo de conformidade/ferramenta interna -- mesmo motivo já
+# registrado em pre_mandatory_reading_guard.sh e pre_edit_safety.sh.
+if ! is_internal_tooling_path "$CWD"; then
+  UNREAD_DOC=$(first_unread_mandatory_doc)
+  if [[ -n "$UNREAD_DOC" ]]; then
+    block "leitura obrigatória" "não encontrei rastro de leitura (via Read) de '$UNREAD_DOC' nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+  fi
 fi
 
 # 5) Ordem completa: concept.md -> architecture.md -> schemas/ ->
@@ -109,16 +102,16 @@ if [[ -f "$EDIT_LOG" ]]; then
     SCHEMA_TIME=$(grep -E "^\S+ $mod/schemas/" "$EDIT_LOG" | head -n 1 | awk '{print $1}')
     CODE_TIME=$(grep -E "^\S+ $mod/" "$EDIT_LOG" | grep -Ev '/docs/|/schemas/|/decisions/' | head -n 1 | awk '{print $1}')
     if [[ -n "$CONCEPT_TIME" && -n "$ARCH_TIME" && "$ARCH_TIME" < "$CONCEPT_TIME" ]]; then
-      block "Bloqueado: em $mod, architecture.md foi tocado antes de concept.md nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "ordem de escrita" "em $mod, architecture.md foi tocado antes de concept.md nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
     if [[ -n "$ARCH_TIME" && -n "$SCHEMA_TIME" && "$SCHEMA_TIME" < "$ARCH_TIME" ]]; then
-      block "Bloqueado: em $mod, schemas/ foi tocado antes de architecture.md nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "ordem de escrita" "em $mod, schemas/ foi tocado antes de architecture.md nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
     if [[ -n "$SCHEMA_TIME" && -n "$CODE_TIME" && "$CODE_TIME" < "$SCHEMA_TIME" ]]; then
-      block "Bloqueado: em $mod, implementação foi tocada antes de schemas/ nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "ordem de escrita" "em $mod, implementação foi tocada antes de schemas/ nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
     if [[ -n "$ARCH_TIME" && -n "$CODE_TIME" && "$CODE_TIME" < "$ARCH_TIME" ]]; then
-      block "Bloqueado: em $mod, implementação foi tocada antes de architecture.md nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "ordem de escrita" "em $mod, implementação foi tocada antes de architecture.md nesta sessão. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
   done
 fi
@@ -127,7 +120,7 @@ fi
 for f in $(git -C "$CWD" diff --cached --name-only -- '*.md' 2>/dev/null); do
   CONTENT=$(git -C "$CWD" show ":$f" 2>/dev/null)
   if echo "$CONTENT" | grep -qE '^\s*\|?\s*Campo\s*\|\s*Valor' && ! echo "$CONTENT" | grep -qi 'Licen'; then
-    block "Bloqueado: $f tem tabela de cabeçalho mas nenhuma linha de Licença. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+    block "licença" "$f tem tabela de cabeçalho mas nenhuma linha de Licença. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
   fi
 done
 
@@ -136,7 +129,7 @@ NEW_DOCS=$(git -C "$CWD" diff --cached --name-only --diff-filter=A -- '*.md' 2>/
 if [[ -n "$NEW_DOCS" ]]; then
   for f in $NEW_DOCS; do
     if git -C "$CWD" show ":$f" 2>/dev/null | grep -Eiq 'era assim|ficou assim|antes:|anteriormente era|mudou de.*para'; then
-      block "Bloqueado: $f é documento novo mas usa linguagem de 'antes e depois'. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "versionamento" "$f é documento novo mas usa linguagem de 'antes e depois'. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
   done
 fi
@@ -147,7 +140,7 @@ if [[ -f "$EDIT_LOG" ]]; then
   for mod in $MODULES; do
     LAST=$(grep "$mod/docs/" "$EDIT_LOG" | tail -n 1 | awk '{print $2}')
     if [[ -n "$LAST" && "$(basename "$LAST")" != "handoff.md" ]]; then
-      block "Bloqueado: o último arquivo tocado em $mod/docs/ foi $(basename "$LAST"), não handoff.md. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "handoff por último" "o último arquivo tocado em $mod/docs/ foi $(basename "$LAST"), não handoff.md. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
   done
 fi
@@ -162,7 +155,7 @@ CLAUDE_MD_CHANGED=$(git -C "$CWD" diff --cached --name-only -- '.claude/CLAUDE.m
 if [[ -n "$CLAUDE_MD_CHANGED" ]]; then
   HOOK_FILES_CHANGED=$(git -C "$CWD" diff --cached --name-only -- '.claude/hooks/*' '.claude/settings.json' 'scripts-hooks/*' 2>/dev/null)
   if [[ -z "$HOOK_FILES_CHANGED" ]]; then
-    block "Aviso: CLAUDE.md mudou neste commit e nenhum arquivo de hook (.claude/hooks/, .claude/settings.json, scripts-hooks/) mudou junto. Confirme se a regra nova/alterada precisa de mecanismo correspondente, ou se é ajuste que não se mecaniza (prosa, contexto). Se já confirmou, use AUTORIZO-TRAVA: <motivo>."
+    block "CLAUDE.md sem gancho correspondente" "CLAUDE.md mudou neste commit e nenhum arquivo de hook (.claude/hooks/, .claude/settings.json, scripts-hooks/) mudou junto. Confirme se a regra nova/alterada precisa de mecanismo correspondente, ou se é ajuste que não se mecaniza (prosa, contexto). Se já confirmou, use AUTORIZO-TRAVA: <motivo>."
   fi
 fi
 
@@ -176,7 +169,7 @@ if [[ -n "$NEW_CONCEPTS" ]]; then
     mod=$(echo "$f" | sed -E 's#modulos/([^/]+)/.*#\1#')
     [[ "$mod" == "_template" ]] && continue
     if [[ -z "$README_CHANGED" ]]; then
-      block "Bloqueado: módulo novo '$mod' (concept.md criado) mas modulos/README.md não mudou neste commit -- falta a linha na tabela de módulos. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "módulo novo" "módulo novo '$mod' (concept.md criado) mas modulos/README.md não mudou neste commit -- falta a linha na tabela de módulos. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
   done
 fi
@@ -194,7 +187,7 @@ if [[ -n "$MODULE_TASKS" ]]; then
     OLD_EMPTY=true; echo "$OLD_SECTION" | grep -q '^- \[ \]' && OLD_EMPTY=false
     NEW_EMPTY=true; echo "$NEW_SECTION" | grep -q '^- \[ \]' && NEW_EMPTY=false
     if [[ "$OLD_EMPTY" != "$NEW_EMPTY" && -z "$ROOT_TASKS_CHANGED" ]]; then
-      block "Bloqueado: $f mudou a seção 'Em aberto' de vazia pra não-vazia (ou o contrário), mas TASKS.md (raiz) não mudou neste commit. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+      block "pendência raiz" "$f mudou a seção 'Em aberto' de vazia pra não-vazia (ou o contrário), mas TASKS.md (raiz) não mudou neste commit. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
     fi
   done
 fi
@@ -205,7 +198,7 @@ fi
 # de frase proibida -- fato de texto, sem exceção possível, igual aos
 # itens 1/2/2b/3/3b acima (nunca autorizável).
 if echo "$COMMAND" | grep -Eiq "descobrimos que|depois de tentar .* percebemos que|a causa acabou sendo"; then
-  block "Bloqueado: a mensagem de commit parece contar a jornada de investigação ('descobrimos que...', 'depois de tentar X, percebemos que...', 'a causa acabou sendo...') -- CLAUDE.md, Passo 4: commit descreve o fato final, nunca como se chegou nele (esse relato pertence aos arquivos de investigação e achados do módulo, nunca ao commit). Reescreva a mensagem."
+  block "commit narrativo" "a mensagem de commit parece contar a jornada de investigação ('descobrimos que...', 'depois de tentar X, percebemos que...', 'a causa acabou sendo...') -- CLAUDE.md, Passo 4: commit descreve o fato final, nunca como se chegou nele (esse relato pertence aos arquivos de investigação e achados do módulo, nunca ao commit). Reescreva a mensagem."
 fi
 
 # 13) Julgamento restante do commit (duplicação de conteúdo entre
@@ -226,7 +219,7 @@ MODULOS_TOCADOS_DOCS=$(git -C "$CWD" diff --cached --name-only -- 'modulos/*/doc
 for mod in $MODULOS_TOCADOS_DOCS; do
   QTD=$(git -C "$CWD" diff --cached --name-only -- "$mod/docs/*" "$mod/decisions/*" 2>/dev/null | wc -l)
   if [[ "$QTD" -gt 1 ]] && ! confirmation_confirmed "commit-revisado"; then
-    block "Sinalizado: este commit toca $QTD arquivos em $mod/docs/ ou $mod/decisions/ -- confirme que nenhuma explicação foi duplicada entre eles (cada uma mora só no documento dono, o resto aponta) e que cada arquivo tocado foi relido, por completo, contra a própria descrição no topo dele (CLAUDE.md, Fluxo de escrita e revisão de documentação). Se estiver tudo certo, responda com a frase exata 'commit revisado, confirmado'; se encontrar duplicação ou divergência, corrija antes de commitar; se isso for engano de outro tipo, use AUTORIZO-TRAVA: <motivo>."
+    block "commit revisado" "este commit toca $QTD arquivos em $mod/docs/ ou $mod/decisions/ -- confirme que nenhuma explicação foi duplicada entre eles (cada uma mora só no documento dono, o resto aponta) e que cada arquivo tocado foi relido, por completo, contra a própria descrição no topo dele (CLAUDE.md, Fluxo de escrita e revisão de documentação). Se estiver tudo certo, responda com a frase exata 'commit revisado, confirmado'; se encontrar duplicação ou divergência, corrija antes de commitar; se isso for engano de outro tipo, use AUTORIZO-TRAVA: <motivo>."
   fi
 done
 

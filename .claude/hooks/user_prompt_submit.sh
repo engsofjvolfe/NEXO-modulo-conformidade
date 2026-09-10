@@ -2,16 +2,17 @@
 # user_prompt_submit.sh -- evento: UserPromptSubmit
 #
 # Roda antes de qualquer mensagem sua ser processada, em toda
-# mensagem, sem exceção. Três bilhetes possíveis, cada um consultado
-# pelos outros hooks desta mesma resposta -- em vez de cada um
-# vasculhar a conversa inteira à procura da frase por conta própria
-# (impreciso, podia pegar uma autorização de mensagens atrás por
-# engano): "AUTORIZO-TRAVA:" (bypass geral, qualquer gancho), "nada a
+# mensagem, sem exceção. Bilhetes possíveis, cada um consultado pelos
+# outros hooks desta mesma resposta -- em vez de cada um vasculhar a
+# conversa inteira à procura da frase por conta própria (impreciso,
+# podia pegar uma autorização de mensagens atrás por engano):
+# "AUTORIZO-TRAVA:" (bypass geral, qualquer gancho), "nada a
 # registrar, confirmado" (item 13 de pre_edit_safety.sh, só esse
 # item), "sem alternativas reais, confirmado" (itens 14/15 do mesmo
-# script, só esses). Autorização geral rejeita o caso em que o texto
-# depois de "AUTORIZO-TRAVA:" é só o placeholder do exemplo
-# ("<motivo>", sem nada real escrito) -- ver comentário mais abaixo.
+# script, só esses), e a marca de "pergunta já feita" (ver mais
+# abaixo). Autorização geral rejeita o caso em que o texto depois de
+# "AUTORIZO-TRAVA:" é só o placeholder do exemplo ("<motivo>", sem
+# nada real escrito) -- ver comentário mais abaixo.
 #
 # Todo bilhete é apagado a cada mensagem nova, tenha ou não a frase
 # correspondente -- uma autorização vale só pra tentativa imediata,
@@ -108,5 +109,16 @@ for par in "${CONFIRMATION_PHRASES[@]}"; do
     : > "$arquivo"
   fi
 done
+
+# Toda marca de "já perguntei isso, esperando resposta" (ver
+# question_already_asked/mark_question_asked, lib/common.sh) é apagada
+# aqui -- mensagem nova de verdade chegou, então faz sentido perguntar
+# de novo se a situação ainda pedir. Sem isso, um bloqueio do evento
+# Stop cuja resposta só a pessoa conduzindo a sessão sabe nunca
+# deixaria a resposta terminar de verdade enquanto ela não respondesse
+# -- cada tentativa de terminar dispara o mesmo bloqueio de novo, sem
+# nenhuma mensagem nova no meio, me obrigando a continuar escrevendo
+# mesmo sem nada novo pra dizer.
+rm -f "${PENDING_QUESTION_DIR:?}"/* 2>/dev/null
 
 exit 0

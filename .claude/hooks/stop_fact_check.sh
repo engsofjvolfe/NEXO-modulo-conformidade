@@ -61,6 +61,12 @@ while IFS= read -r line; do
   [[ -z "$WT_BRANCH" ]] && continue
   [[ "$WT_BRANCH" == "develop" || "$WT_BRANCH" == "main" ]] && continue
   paths_equal "$WT_PATH" "$CWD" && continue
+  # Só conta como "já mesclada e esquecida" se a branch tiver pelo
+  # menos um commit próprio -- uma branch sem commit ainda é idêntica a
+  # develop, "--merged" a lista mesmo sem nenhuma mesclagem real ter
+  # acontecido.
+  COMMITS_PROPRIOS=$(git -C "$CWD" rev-list --count "develop..${WT_BRANCH}" 2>/dev/null)
+  [[ "${COMMITS_PROPRIOS:-0}" -eq 0 ]] && continue
   if echo "$MERGED_BRANCHES" | grep -qxF "$WT_BRANCH"; then
     STALE_WORKTREES+="  - $WT_PATH (branch '$WT_BRANCH', já mesclada em develop)"$'\n'
   fi
@@ -92,9 +98,19 @@ if echo "$LAST_MSG" | grep -Eiq '\bPR\b|pull request'; then
 fi
 
 if [[ -n "$CONTEXT" ]]; then
-  block "Bloqueado -- fato conferido, não julgamento (CLAUDE.md, seção correspondente):
-${CONTEXT}
+  # Resolver qualquer um dos três fatos acima (commitar, remover
+  # worktree, trocar base do PR) é decisão de quem conduz a sessão,
+  # nunca decidida sozinha aqui -- então isso só é perguntado uma vez
+  # (ver question_already_asked, lib/common.sh); perguntar de novo, a
+  # cada tentativa de terminar a resposta, sem nenhuma mensagem nova
+  # da pessoa no meio, só obrigaria a resposta a continuar escrevendo
+  # sem nada novo pra dizer, sem nunca deixar a sessão parar de verdade
+  # esperando ela.
+  if ! question_already_asked "stop-fact-check"; then
+    mark_question_asked "stop-fact-check" "$CONTEXT"
+    block "fato conferido" "$CONTEXT
 Corrija antes de terminar a resposta. Se algum destes itens for engano ou exceção real, use AUTORIZO-TRAVA: <motivo> na próxima mensagem."
+  fi
 fi
 
 exit 0

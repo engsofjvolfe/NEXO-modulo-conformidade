@@ -46,6 +46,36 @@ if [[ "$TOOL_NAME" == "TodoWrite" ]]; then
   exit 0
 fi
 
+# Edição/leitura só dentro do módulo de conformidade e do resto da
+# ferramenta interna (ver INTERNAL_TOOLING_PATHS em lib/common.sh, lida
+# do .gitignore) nunca depende da leitura obrigatória do NEXO -- este
+# módulo tem sua própria documentação e seu próprio processo de
+# escrita, sobre o produto NEXO, não parte dele. Isenção permanente,
+# sem precisar de AUTORIZO-TRAVA a cada mensagem -- decidida em
+# modulos/conformidade/decisions/ (ver ADR correspondente). Confere
+# `file_path`, `command`, `path` e `pattern` juntos (cobre Read/Write/
+# Edit, Bash, Grep/Glob) -- se nenhum campo desses existir no tipo de
+# ferramenta, a checagem simplesmente não bate com nada, sem erro.
+ALVO_FERRAMENTA="$(field '.tool_input.file_path')$(field '.tool_input.command')$(field '.tool_input.path')$(field '.tool_input.pattern')"
+if command_touches_internal_tooling "$ALVO_FERRAMENTA"; then
+  exit 0
+fi
+
+# Edição/leitura só dentro do módulo de conformidade e do resto da
+# ferramenta interna (ver INTERNAL_TOOLING_PATHS em lib/common.sh, lida
+# do .gitignore) nunca depende da leitura obrigatória do NEXO -- este
+# módulo tem sua própria documentação e seu próprio processo de
+# escrita, sobre o produto NEXO, não parte dele. Isenção permanente,
+# sem precisar de AUTORIZO-TRAVA a cada mensagem -- decidida em
+# modulos/conformidade/decisions/ (ver ADR correspondente). Confere
+# `file_path`, `command`, `path` e `pattern` juntos (cobre Read/Write/
+# Edit, Bash, Grep/Glob) -- se nenhum campo desses existir no tipo de
+# ferramenta, a checagem simplesmente não bate com nada, sem erro.
+ALVO_FERRAMENTA="$(normalize_path "$(field '.tool_input.file_path')")$(field '.tool_input.command')$(normalize_path "$(field '.tool_input.path')")$(field '.tool_input.pattern')"
+if command_touches_internal_tooling "$ALVO_FERRAMENTA"; then
+  exit 0
+fi
+
 # Comando git ou gh (qualquer um -- status, commit, push, pull, abrir
 # PR, etc.) nunca depende de ter lido os seis documentos manuais
 # primeiro -- decisão explícita, dada em texto, de quem desenvolve o
@@ -93,11 +123,11 @@ if [[ "$TOOL_NAME" == "Read" ]]; then
       exit 0
     fi
   done
-  block "Bloqueado: leitura manual obrigatória ainda não feita ('$UNREAD_DOC') -- enquanto sobrar documento da lista, só é permitido usar Read nesses seis documentos, nunca em outro arquivo primeiro (CLAUDE.md exige a leitura deles antes de qualquer outra coisa, sem exceção). Leia '$UNREAD_DOC' antes de ler '$REQUESTED_BASENAME'. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+  block "Bloqueado: leitura manual obrigatória ainda não feita ('$UNREAD_DOC') -- enquanto sobrar documento da lista, só é permitido usar Read nesses seis documentos, nunca em outro arquivo primeiro (CLAUDE.md exige a leitura deles antes de qualquer outra coisa, sem exceção). Leia '$UNREAD_DOC' antes de ler '$REQUESTED_BASENAME'. LEMBRETE PRA QUEM ESTÁ CONDUZINDO A IA: isso trava de verdade, sem negociação -- a IA deve te contar isso, em poucas palavras, e nunca tentar destravar sozinha. Só você decide se é engano (com AUTORIZO-TRAVA: <motivo>, digitado por você, nunca pela IA)."
 fi
 
 if [[ -n "$UNREAD_DOC" ]]; then
-  block "Bloqueado: leitura manual obrigatória ainda não feita ('$UNREAD_DOC') -- CLAUDE.md exige isso antes de qualquer outra coisa, não só antes de código. Leia (via Read) os seis documentos da lista antes de usar '$TOOL_NAME'. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+  block "Bloqueado: leitura manual obrigatória ainda não feita ('$UNREAD_DOC') -- CLAUDE.md exige isso antes de qualquer outra coisa, não só antes de código. Leia (via Read) os seis documentos da lista antes de usar '$TOOL_NAME'. LEMBRETE PRA QUEM ESTÁ CONDUZINDO A IA: isso trava de verdade, sem negociação -- a IA deve te contar isso, em poucas palavras, e nunca tentar destravar sozinha. Só você decide se é engano (com AUTORIZO-TRAVA: <motivo>, digitado por você, nunca pela IA)."
 fi
 
 exit 0

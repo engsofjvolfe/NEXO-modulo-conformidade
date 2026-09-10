@@ -4,8 +4,8 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Tasks |
-| Versão | 0.14.0 |
-| Data | 04-09-2026 |
+| Versão | 0.24.0 |
+| Data | 10-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
 > Lista mutável de pendências só deste módulo. Lida depois de
@@ -14,7 +14,13 @@
 > decisão de verdade, o item aqui vira só um ponteiro pra ADR em
 > `decisions/` — nunca um resumo paralelo do que a decisão já diz.
 > Pendência resolvida (com ou sem ADR) não é apagada — vira item
-> riscado na seção `Resolvidas`.
+> riscado na seção `Resolvidas`. Pendência específica do projeto
+> hospedeiro (não do código deste módulo em si) não entra aqui --
+> este arquivo viaja pro repositório separado do módulo, que precisa
+> servir qualquer projeto hospedeiro. Cada item usa data explícita
+> (não "hoje", "esta sessão" ou "nesta rodada") -- entrada datada
+> nunca é reescrita depois, então uma referência relativa ao tempo
+> perde o sentido assim que alguém lê o item bem depois de escrito.
 >
 > Cada item segue [a regra de escrita geral](../CONVENCOES.md#como-escrever):
 > resumo simples primeiro, detalhe técnico depois.
@@ -27,16 +33,17 @@
 ## Em aberto
 
 - [ ] **Confirmar de ponta a ponta, numa sessão nova, que os cinco
-      mecanismos corrigidos na segunda rodada de hoje bloqueiam de
-      verdade.**
+      mecanismos corrigidos em 27-08-2026 (segunda rodada daquele dia)
+      bloqueiam de verdade.**
 
       *Resumo simples:* uma queixa direta -- "o sistema ainda deixa
       escolher se segue a trava ou não" -- revelou que boa parte do
       sistema nunca bloqueava de verdade: o formato de resposta que os
       ganchos revisados por IA usavam não é reconhecido pelo Claude
       Code como decisão de bloqueio, então eles só "avisavam". Cinco
-      pontos corrigidos, mesma limitação da pendência acima (sessão
-      que corrige não consegue confirmar o bloqueio ao vivo).
+      pontos corrigidos; a mesma sessão que corrige não consegue
+      confirmar o bloqueio ao vivo (ver
+      [pitfalls.md](<pitfalls.md#2026-08-27-configuracao-de-ganchos-nao-recarrega-na-mesma-sessao>)).
 
       *Detalhe técnico:* cinco pontos a confirmar: (1) o gancho `agent`
       de revisão de commit (`if: Bash(git commit *)`) bloqueia um
@@ -63,7 +70,8 @@
       Pontos (3), (4) e (5) continuam válidos e ainda sem confirmação.
 
 - [ ] **Confirmar de ponta a ponta, numa sessão nova, que os quatro
-      mecanismos criados hoje bloqueiam de verdade.**
+      mecanismos criados em 27-08-2026 (criação do módulo) bloqueiam
+      de verdade.**
 
       *Resumo simples:* tudo foi testado isolado (funções chamadas
       direto, fora do fluxo real de um gancho) — ver
@@ -84,73 +92,18 @@
       instrução do usuário esquecida quando existir uma de verdade
       (decisions/0004).
 
-- [ ] **Fazer a auditoria linha a linha do `CLAUDE.md`, com checklist
-      visível, que ficou combinada pra depois.**
-
-      *Resumo simples:* a varredura feita hoje comparou o `CLAUDE.md`
-      contra a tabela de referência do `MANUAL.md` e achou quatro
-      lacunas reais — mas não foi, ela mesma, uma releitura linha a
-      linha com registro visível de cada regra conferida. Combinado
-      explicitamente adiar essa auditoria mais rigorosa.
-
-      *Detalhe técnico:* produzir um checklist -- cada linha do
-      `CLAUDE.md` (ou cada regra identificável) contra o mecanismo que
-      a cobre (ou a ausência de um), visível de verdade, não só a
-      palavra do revisor. Sem desenho ainda.
-
-- [ ] **Formalizar retroativamente, em `decisions/`, as escolhas
-      estruturais já tomadas antes deste módulo existir como módulo.**
-
-      *Resumo simples:* os quatro ADRs de hoje
-      (decisions/0001 a 0004) cobrem só o trabalho desta sessão -- as
-      decisões estruturais mais antigas (por que os hooks nativos do
-      git moram em `scripts-hooks/`, não `.githooks/`; o desenho de
-      `pre_bash_search_guard.sh`; a divisão de custo do evento `Stop`
-      entre fato mecânico e pergunta de julgamento; entre outras) só
-      existem narradas em `MANUAL.md`, seção 9 -- nunca como ADR
-      própria deste módulo.
-
-      *Detalhe técnico:* candidatas identificadas em `MANUAL.md`,
-      seção 9: 9.4 (local dos hooks nativos do git), 9.5 (desenho do
-      `pre_bash_search_guard.sh`), 9.6 (arquitetura de custo do
-      `Stop`), 9.8 (onde a checagem de leitura obrigatória entra no
-      fluxo). As demais entradas da seção 9 (9.1, 9.2, 9.3, 9.7, 9.9,
-      9.10, 9.11) são conserto de bug ou erro factual, não escolha
-      real entre alternativas -- não precisam de ADR.
-
-- [x] **Investigar a causa raiz do "modo sem perguntar" que bloqueou o
-      gancho de `Stop` durante parte desta sessão.**
-      Resolvido -- ver
-      [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>).
-
-- [x] **Confirmar ao vivo, numa sessão nova, a ficha/síntese
-      ([decisions/0012](<../decisions/0012-ficha-sintese-substitui-releitura-do-diario-a-cada-checagem.md>)).**
-      Resolvido, embora não do jeito esperado -- ver
-      [Resolvidas](#resolvidas).
-
-- [x] **Confirmar ao vivo, numa sessão nova, o auto-portão contra
-      falha aberta do filtro `if` nos dois ganchos `agent` (revisão de
-      commit, revisão de preview).**
-      Resolvido de outra forma -- os dois ganchos `agent` citados
-      (revisão de commit, revisão de início do teste no preview) foram
-      removidos por completo, substituídos por script comum
-      (`pre_commit_hygiene.sh`, `pre_preview_check.sh`), cujo
-      auto-portão já foi testado isoladamente de verdade, sem a
-      limitação que motivou esta pendência. Ver
-      [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>).
-
-- [ ] **Confirmar ao vivo, com o modo automático da sessão desligado,
-      que os quatro ganchos decididos por IA que ainda existem
-      (revisão de edição de documento, duas checagens do fim da
-      resposta, checagem de idioma/emoji) conseguem usar ferramenta de
-      verdade.**
+- [ ] **Confirmar ao vivo, com o modo automático da sessão desligado
+      (desligamento feito em 28-08-2026), que os quatro ganchos
+      decididos por IA que ainda existem (revisão de edição de
+      documento, duas checagens do fim da resposta, checagem de
+      idioma/emoji) conseguem usar ferramenta de verdade.**
 
       *Resumo simples:* mesmo com o formato de resposta corrigido, os
       quatro continuaram sem conseguir ler nada enquanto o modo
-      automático estava ligado -- confirmado ao vivo, mais de uma vez,
-      nesta mesma sessão. O modo automático foi desligado no fim desta
-      rodada, mas a confirmação de que isso resolve o problema de
-      verdade ainda não aconteceu.
+      automático estava ligado -- confirmado ao vivo mais de uma vez,
+      em 28-08-2026. O modo automático foi desligado no fim daquele
+      dia, mas a confirmação de que isso resolve o problema de verdade
+      ainda não aconteceu.
 
       *Detalhe técnico:* ver
       [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>)
@@ -162,16 +115,15 @@
       formato de resposta certo.
 
 - [ ] **Confirmar de ponta a ponta, numa sessão nova, os mecanismos
-      corrigidos nesta rodada (bloqueio real dos ganchos de
+      corrigidos em 28-08-2026 (bloqueio real dos ganchos de
       conformidade).**
 
-      *Resumo simples:* mesma limitação de toda esta lista -- a
-      sessão que corrige não consegue ver a correção valendo de
-      verdade, porque os ganchos rodam a partir da pasta principal do
-      repositório, não da worktree onde a correção foi escrita. Cinco
-      pontos corrigidos nesta rodada, ainda sem confirmação numa
-      sessão limpa, que já carregue os arquivos corrigidos desde o
-      início.
+      *Resumo simples:* a sessão que corrige não consegue ver a
+      correção valendo de verdade, porque os ganchos rodam a partir da
+      pasta principal do repositório, não da worktree onde a correção
+      foi escrita. Cinco pontos corrigidos naquele dia, ainda sem
+      confirmação numa sessão limpa, que já carregue os arquivos
+      corrigidos desde o início.
 
       *Detalhe técnico:* cinco pontos a confirmar: (1) `SessionStart`
       não apaga mais a ficha na compactação (só em
@@ -188,14 +140,8 @@
       em diante, e
       [decisions/0013](<../decisions/0013-frescor-uniforme-de-leitura-substitui-permanencia.md>).
 
-- [ ] **Investigar `pre_git_rules.sh` bloqueando commit legítimo numa
-      worktree de tarefa, achando que a branch ativa era `develop`.**
-      Relato de outra sessão, não reproduzido ao vivo nesta rodada --
-      ver [analysis.md](<analysis.md#2026-08-29-relatorio-de-outra-sessao-e-reset-da-ficha-no-evento-resume>),
-      item 3.
-
 - [ ] **Confirmar de ponta a ponta, numa sessão nova, os mecanismos
-      corrigidos nesta rodada.** Ver
+      corrigidos em 29-08-2026.** Ver
       [decisions/0015](<../decisions/0015-sessionstart-nao-reseta-mais-a-ficha-no-evento-resume-e-janela-de-frescor-maior.md>),
       [decisions/0016](<../decisions/0016-autorizo-trava-rejeita-reticencias-sem-motivo-real.md>),
       [decisions/0017](<../decisions/0017-comandos-git-gh-isentos-da-leitura-manual-obrigatoria.md>)
@@ -210,8 +156,8 @@
       *Resumo simples:* os quatro assistentes de revisão de PR, o
       comando que os dispara juntos, e o gancho que confere se a
       revisão já rodou antes de abrir o PR foram escritos e conferidos
-      por sintaxe, mas nenhum foi chamado de verdade ainda -- mesma
-      limitação já registrada em
+      por sintaxe, em 29-08-2026, mas nenhum foi chamado de verdade
+      ainda -- mesma limitação já registrada em
       [pitfalls.md](<pitfalls.md#2026-08-27-configuracao-de-ganchos-nao-recarrega-na-mesma-sessao>):
       a sessão que escreve uma mudança em `.claude/` não vê essa
       mudança valendo de verdade nela mesma.
@@ -233,7 +179,7 @@
       remoção (`git checkout <commit-pai> -- <caminhos>`, seguido de
       `git reset HEAD` pra tirar da área de stage, mantendo tudo fora
       do controle de versão como o `.gitignore` já previa). Na mesma
-      sessão, tentativa de chamar os quatro revisores pelo nome
+      data, tentativa de chamar os quatro revisores pelo nome
       (`subagent_type: revisor-testes`, etc.), de dentro de uma
       worktree de tarefa, falhou -- devolveu "Agent type 'revisor-testes'
       not found", listando só os tipos genéricos do Claude Code. Não é
@@ -266,60 +212,139 @@
       A parte que ainda falta desta pendência -- confirmar se os quatro
       agentes de revisão passam a aparecer na lista de agentes
       disponíveis de uma sessão nova, iniciada depois desta correção --
-      continua em aberto: a correção de hoje não pôde ser testada nesse
-      ponto específico dentro da própria sessão que a escreveu (mesmo
-      limite já documentado em
+      continua em aberto: a correção de 04-09-2026 não pôde ser testada
+      nesse ponto específico dentro da própria sessão que a escreveu
+      (mesmo limite já documentado em
       [pitfalls.md](<pitfalls.md#2026-08-27-configuracao-de-ganchos-nao-recarrega-na-mesma-sessao>)).
-
-- [ ] **Resolver de vez o gancho do evento `Stop` que exige resposta em
-      formato de dado bruto (JSON), em vez de texto normal.**
-
-      *Resumo simples:* uma das checagens automáticas que rodam no fim
-      de cada resposta pede, de forma repetida, que a resposta inteira
-      seja só um bloco de dado técnico (sem nenhuma frase em
-      português) — o oposto da regra do próprio projeto, que exige
-      toda resposta em português, explicando tudo em linguagem
-      simples.
-
-      *Detalhe técnico:* a checagem bloqueia de forma repetida (mais
-      de dez vezes seguidas, num caso registrado), mesmo depois de a
-      resposta já estar em conformidade com as outras regras (idioma,
-      termo técnico explicado, sem emoji). A própria documentação
-      oficial do Claude Code já marca esse tipo de gancho
-      ("Prompt-based hooks", evento `Stop`) como experimental —
-      pendência é confirmar se o formato de saída esperado por este
-      gancho específico está de acordo com essa documentação, e
-      corrigir o texto da instrução dele (ou trocar de mecanismo) pra
-      parar de pedir um formato que contradiz a regra de idioma/
-      linguagem simples do próprio projeto.
 
 - [ ] **Confirmar de ponta a ponta, numa sessão nova, que
       `pre_pr_description_check.sh` bloqueia de verdade um PR fora do
       modelo oficial.**
 
-      *Resumo simples:* a trava nova foi escrita e ligada ao evento
-      certo, mas ainda não foi vista bloqueando um PR de verdade,
-      numa sessão que já carregue o arquivo desde o início.
+      *Resumo simples:* a trava foi escrita e ligada ao evento certo
+      em 04-09-2026, mas ainda não foi vista bloqueando um PR de
+      verdade, numa sessão que já carregue o arquivo desde o início.
 
       *Detalhe técnico:* mesma limitação já registrada nas pendências
       de confirmação acima -- a sessão que escreve o gancho não
       consegue ver a configuração de ganchos recarregar sozinha (ver
       [pitfalls.md](<pitfalls.md#2026-08-27-configuracao-de-ganchos-nao-recarrega-na-mesma-sessao>)).
 
-- [ ] **Completar a lista de ganchos em `architecture.md` com
-      `pre_pr_review_check.sh` e `worktree_create_setup.sh`, cada um
-      com sua própria ADR retroativa.**
+- [ ] **Confirmar ao vivo, numa sessão nova, os pontos corrigidos em
+      08-09-2026 que ainda não foram vistos bloqueando de verdade.**
 
-      *Resumo simples:* os dois já existem e já funcionam, mas nunca
-      foram acrescentados à lista de arquivos do módulo -- achado ao
-      tentar acrescentar um gancho novo à mesma lista.
+      *Resumo simples:* parte do que foi corrigido naquele dia já foi
+      confirmado ao vivo dentro da própria sessão (negação de
+      `cat`/`head`/`grep`; fluxo completo de leitura cheia seguida de
+      edição; acesso ao material do módulo pela raiz através do atalho
+      de pasta) -- essa parte virou nota de acompanhamento direto nas
+      ADRs correspondentes, nunca item aqui, porque não faz sentido
+      nascer pendência de algo que já foi visto funcionando. Os pontos
+      abaixo são só o que ainda não foi visto, de verdade, bloqueando.
 
-      *Detalhe técnico:* mesma categoria já registrada na pendência
-      "Formalizar retroativamente, em `decisions/`, as escolhas
-      estruturais já tomadas antes deste módulo existir como módulo" —
-      candidatas novas pra essa mesma formalização.
+      *Detalhe técnico:* (1) leitura parcial (offset/limit) sem
+      leitura cheia fresca antes bloqueando -- decisions/0023; (2)
+      `Write` sobre arquivo já existente sem leitura fresca bloqueando
+      -- mesma ADR; (3) `tail`, `sed` e `awk` negados (só
+      `cat`/`head`/`grep` foram confirmados) -- decisions/0024; (4)
+      editar diretamente a pasta de estado/autorização negado
+      (`Edit(/.claude/hooks/state/**)`); (5) resposta com emoji de
+      propósito bloqueando por `stop_emoji_check.sh` -- decisions/0026;
+      (6) resposta com termo já explicado, mesmo resumido, não
+      bloqueando mais por falso positivo.
+
+- [ ] **Confirmar ao vivo, numa sessão nova, que o gancho de leitura
+      obrigatória (`pre_mandatory_reading_guard.sh`) bloqueia e libera
+      de verdade com a lista lida do `CLAUDE.md` (decisions/0028).**
+      Ver [findings.md](<findings.md#2026-09-08-lista-de-leitura-obrigatoria-escrita-direto-no-codigo>)
+      pro que já foi confirmado (a função que lê a lista, isolada, em
+      08-09-2026); o gancho inteiro, dentro do fluxo real de uma
+      ferramenta, ainda não foi visto bloqueando nem liberando.
+
+- [ ] **Confirmar ao vivo, numa sessão nova, o caminho de worktree a
+      ligar reaproveitando a lista de ferramenta interna
+      (decisions/0029), e a checagem de autorização por Read nos três
+      ganchos de IA (decisions/0030).**
+
+      *Resumo simples:* as duas correções foram escritas e conferidas
+      por sintaxe em 08-09-2026, mas não vistas ao vivo, numa sessão
+      nova.
+
+      *Detalhe técnico:* confirmar: (1) `ensure_worktree_links` liga as
+      pastas certas numa worktree nova, lendo `internal_tooling_paths`
+      em vez de lista fixa; (2) os três pontos que usam uma segunda
+      inteligência artificial (revisão de edição, duas checagens do fim
+      da resposta) conseguem checar `AUTORIZO-TRAVA` de verdade,
+      usando a ferramenta Read em vez do comando negado `cat`.
+
+- [ ] **Confirmar ao vivo, numa sessão nova, que um bloqueio do evento
+      `Stop` cuja resposta só a pessoa resolve pergunta uma vez só,
+      sem repetir sem fim (decisions/0033).**
+
+      *Resumo simples:* a correção foi escrita e conferida por sintaxe
+      em 09-09-2026, mas o próprio defeito só aparece de verdade numa
+      sessão nova, que já carregue os arquivos corrigidos desde o
+      início -- a sessão que escreveu a correção não consegue testar
+      isso nela mesma.
+
+      *Detalhe técnico:* confirmar, numa sessão nova: (1) um bloqueio
+      de `stop_fact_check.sh` (ex.: `git status` sujo) aparece uma vez,
+      depois libera a resposta terminar, sem aparecer de novo sem
+      mensagem nova; (2) o mesmo comportamento nos três pontos que
+      usam uma segunda inteligência artificial no evento `Stop`; (3)
+      uma mensagem nova de verdade reabre a possibilidade de perguntar
+      de novo, se a situação ainda pedir.
+
+- [ ] **Confirmar ao vivo, numa sessão nova, a sincronização automática
+      entre este projeto e o projeto hospedeiro (decisions/0034), o
+      instalador de comando único com localização livre
+      (`scripts/instalar.sh`, decisions/0036), e a isenção de leitura
+      obrigatória pro `CLAUDE.md`/transcrição (decisions/0035).**
+
+      *Resumo simples:* as correções foram escritas, testadas por
+      sintaxe, e a sincronização já foi feita manualmente uma vez em
+      10-09-2026 -- mas o comportamento automático (sozinho, no início
+      de uma sessão nova) e o instalador completo (num projeto
+      diferente, do zero, em caminho livre) ainda não foram vistos
+      acontecendo de verdade.
+
+      *Detalhe técnico:* confirmar, numa sessão nova: (1) alterar de
+      propósito só a cópia local (qualquer um dos seis itens
+      copiáveis, ex.: `modulos/conformidade/.claude/settings.json`) e,
+      na sessão nova seguinte, ver o arquivo correspondente da raiz
+      mudar sozinho, sem nenhuma cópia manual; (2) o vigia auditor do
+      evento `Stop` conseguir ler o `CLAUDE.md` e a transcrição sem
+      cair na cascata de leitura obrigatória; (3) `scripts/instalar.sh`
+      rodado do zero, num projeto de teste separado, copiando a pasta
+      pra um caminho qualquer (não `modulos/conformidade`) e rodando o
+      comando da raiz -- confirma que o marcador é gravado certo, os
+      dois atalhos de pasta e o restante são criados corretamente.
 
 ## Resolvidas
+
+- [x] **Investigar a causa raiz do "modo sem perguntar" que bloqueou o
+      gancho de `Stop` durante parte de uma sessão anterior.**
+      Resolvido -- ver
+      [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>).
+
+- [x] **Confirmar ao vivo, numa sessão nova, o auto-portão contra
+      falha aberta do filtro `if` nos dois ganchos `agent` (revisão de
+      commit, revisão de preview).**
+      Resolvido de outra forma -- os dois ganchos `agent` citados
+      (revisão de commit, revisão de início do teste no preview) foram
+      removidos por completo, substituídos por script comum
+      (`pre_commit_hygiene.sh`, `pre_preview_check.sh`), cujo
+      auto-portão já foi testado isoladamente de verdade, sem a
+      limitação que motivou esta pendência. Ver
+      [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>).
+
+- [x] **Resolver de vez o gancho do evento `Stop` que exige resposta
+      em formato de dado bruto (JSON), em vez de texto normal, e que
+      ficava insistindo em achado já explicado na resposta.** Resolvido
+      -- checagem de emoji virou fato mecânico (`stop_emoji_check.sh`,
+      sem IA), gancho de julgamento restante ficou só com a pergunta
+      sobre termo técnico, instrução menos propensa a falso positivo.
+      Ver [decisions/0026](<../decisions/0026-checagem-de-emoji-no-fim-da-resposta-vira-fato-mecanico.md>).
 
 - [x] **Corrigir `scripts/hooks/pre-commit` nunca detectando subida de
       versão em documento só com a tabela "Controle de versão", sem
@@ -344,6 +369,32 @@
       e
       [findings.md](<findings.md#2026-08-28-corrupcao-e-perda-de-fato-na-ficha-por-escrita-concorrente>).
 
+- [x] **Completar a lista de ganchos em `architecture.md` com
+      `pre_pr_review_check.sh` e `worktree_create_setup.sh`, cada um
+      com sua própria ADR retroativa.**
+      Resolvido -- ver
+      [decisions/0031](<../decisions/0031-revisao-de-pr-fica-desatualizada-e-fato-mecanico.md>)
+      e
+      [decisions/0032](<../decisions/0032-worktree-nova-liga-pastas-locais-por-atalho.md>).
+
+- [x] **Auditar se `scripts/hooks/pre-commit` e `scripts/README.md`
+      citam convenção específica do projeto onde este projeto foi
+      usado pela primeira vez, fora do escopo genérico do resto deste
+      código.**
+      Resolvido -- a checagem em si já era genérica; comentários
+      generalizados, sem citar caminho de projeto específico. Ver
+      [decisions/0036](<../decisions/0036-localizacao-de-instalacao-livre-marcador-substitui-caminho-fixo.md>).
+
+- [x] **Investigar `pre_git_rules.sh` bloqueando commit legítimo numa
+      worktree de tarefa, achando que a branch ativa era `develop`.**
+      Reproduzido ao vivo, de propósito, em 10-09-2026: `.cwd` (pasta
+      atual que o Claude Code informa ao gancho) não acompanha um `cd`
+      escrito dentro do próprio comando -- só a ferramenta
+      `EnterWorktree` move a sessão de verdade. Sem correção de código
+      -- comportamento correto do gancho, dado um jeito de trabalhar
+      que este projeto já não recomenda. Ver
+      [pitfalls.md](<pitfalls.md#2026-09-10-cwd-do-gancho-nao-acompanha-cd-dentro-do-proprio-comando>).
+
 ## Controle de versão
 
 | Versão | Data | Alteração | Origem da alteração |
@@ -362,3 +413,13 @@
 | 0.12.0 | 04-09-2026 | Nota de acompanhamento na pendência de confirmação dos quatro revisores de PR: ponto (4) diagnosticado por completo e corrigido -- ver decisions/0021; parte restante (revisores aparecerem numa sessão nova, depois da correção) segue em aberto. | Achado durante a tarefa "confirmar-visual-barra-titulo" do módulo motor; resolução de [decisions/0021](<../decisions/0021-atalho-de-pasta-liga-material-local-em-toda-worktree.md>) |
 | 0.13.0 | 04-09-2026 | Pendência nova acrescentada, sobre o formato de resposta exigido pelo gancho do evento `Stop`. | Achado ao vivo durante a tarefa "confirmar-visual-barra-titulo" do módulo motor |
 | 0.14.0 | 04-09-2026 | Duas pendências novas acrescentadas. | Resolução de [decisions/0022](<../decisions/0022-checagem-do-corpo-do-pr-contra-o-modelo-oficial.md>) |
+| 0.15.0 | 08-09-2026 | Pendência do formato de resposta em JSON do gancho `Stop` movida pra Resolvidas (decisions/0026); pendência nova sobre confirmação ao vivo dos pontos desta rodada, só com o que ainda não foi visto funcionando (o que já foi confirmado virou nota de acompanhamento direto nas ADRs, nunca item aqui); pendência nova sobre a regra absoluta no documento de instruções do projeto hospedeiro (decisions/0024), bloqueada até decisão sobre a leitura dos seis documentos obrigatórios do projeto hospedeiro. | Fechamento da rodada de frescor por tokens, negação de comando de Bash, atalho de pasta e checagem de emoji |
+| 0.16.0 | 08-09-2026 | Pendência nova acrescentada: confirmação ao vivo do gancho de leitura obrigatória inteiro, com a lista lida do `CLAUDE.md` (decisions/0028). | Resolução de [decisions/0028](<../decisions/0028-lista-de-leitura-obrigatoria-lida-do-arquivo-de-instrucoes.md>) e [decisions/0027](<../decisions/0027-leitura-obrigatoria-ignora-ferramenta-sem-alvo-de-arquivo.md>) |
+| 0.17.0 | 08-09-2026 | Três pendências já marcadas como feitas, mas ainda em "Em aberto" (causa raiz do "modo sem perguntar", auto-portão, ficha/síntese), movidas pra "Resolvidas" -- a de ficha/síntese era cópia duplicada de uma entrada que já existia lá; pendência nova acrescentada sobre confirmação ao vivo de decisions/0029 e 0030. | Resolução de [decisions/0029](<../decisions/0029-caminho-de-worktree-a-ligar-reaproveita-ferramenta-interna.md>) e [decisions/0030](<../decisions/0030-ganchos-de-ia-usam-read-em-vez-de-cat-pra-checar-autorizacao.md>) |
+| 0.18.0 | 08-09-2026 | Três pendências específicas do projeto hospedeiro (não do módulo) removidas: auditoria linha a linha do `CLAUDE.md` do projeto hospedeiro; formalização retroativa apoiada num documento específico do projeto hospedeiro (`MANUAL.md`, seção 9); regra absoluta a acrescentar no arquivo de instruções do projeto hospedeiro. Nota da pendência de `architecture.md` ajustada, sem mais apontar pra pendência removida. | Correção de agnosticismo -- pendência específica de projeto não pertence ao repositório do módulo |
+| 0.19.0 | 09-09-2026 | Toda referência a "hoje", "esta sessão" ou "nesta rodada" trocada por data explícita, em todo item -- entrada datada nunca é reescrita depois, então referência relativa ao tempo perde o sentido lida bem depois de escrita. Pendência do `architecture.md` (`pre_pr_review_check.sh`, `worktree_create_setup.sh`) resolvida, movida pra "Resolvidas". | Pedido explícito de reescrita atemporal; resolução de [decisions/0031](<../decisions/0031-revisao-de-pr-fica-desatualizada-e-fato-mecanico.md>) e [decisions/0032](<../decisions/0032-worktree-nova-liga-pastas-locais-por-atalho.md>) |
+| 0.20.0 | 09-09-2026 | Pendência nova acrescentada: confirmação ao vivo, numa sessão nova, de que um bloqueio do evento `Stop` cuja resposta só a pessoa resolve pergunta uma vez só, sem repetir sem fim. | Resolução de [decisions/0033](<../decisions/0033-bloqueio-que-so-a-pessoa-resolve-pergunta-uma-vez-so.md>) |
+| 0.21.0 | 10-09-2026 | Pendência nova acrescentada: confirmação ao vivo, numa sessão nova, da sincronização automática de `settings.json` e da isenção de leitura obrigatória pro `CLAUDE.md`/transcrição. | Resolução de [decisions/0034](<../decisions/0034-copia-de-settings-json-sincronizada-no-inicio-de-cada-sessao.md>) e [decisions/0035](<../decisions/0035-leitura-obrigatoria-libera-claude-md-e-transcricao-sempre.md>) |
+| 0.22.0 | 10-09-2026 | Pendência de sincronização estendida (instalador de comando único, seis itens copiáveis, não só `settings.json`); pendência nova acrescentada: auditar se `scripts/hooks/pre-commit`/`scripts/README.md` citam convenção específica do projeto onde este módulo nasceu. | Instalação de um comando só (`scripts/instalar.sh`); remoção de `MANUAL.md` deste módulo, mantido só na raiz do projeto hospedeiro |
+| 0.23.0 | 10-09-2026 | Pendência de confirmação ao vivo atualizada (localização de instalação livre, não mais caminho fixo); pendência de auditoria movida pra Resolvidas. | Resolução de [decisions/0036](<../decisions/0036-localizacao-de-instalacao-livre-marcador-substitui-caminho-fixo.md>) |
+| 0.24.0 | 10-09-2026 | Pendência de `pre_git_rules.sh` (aberta desde 29-08-2026) movida pra Resolvidas, reproduzida ao vivo de propósito. | Fechamento de item pendente há mais tempo neste documento |

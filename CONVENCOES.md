@@ -6,12 +6,11 @@
 | Documento | Convenções |
 | Licença | Todos os direitos reservados — ver [LICENSE](LICENSE) |
 
-> Cópia, restrita a este módulo, da convenção de escrita e navegação
-> usada em todo documento deste repositório. Existe aqui porque este
-> repositório nasceu como um recorte do projeto NEXO (onde essa mesma
-> convenção mora em `modulos/README.md`, compartilhada por vários
-> módulos) — como este repositório só tem um módulo, a convenção fica
-> junto dele, num arquivo próprio, em vez de um índice pra vários.
+> Cópia, restrita a este módulo, da mesma convenção de escrita e
+> navegação usada em projetos com mais de um módulo (lá, ela mora num
+> índice compartilhado por todos). Como este repositório só tem um
+> módulo, a convenção fica junto dele, num arquivo próprio, em vez de
+> um índice pra vários.
 
 ## Como navegar
 

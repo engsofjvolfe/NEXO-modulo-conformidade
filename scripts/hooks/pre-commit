@@ -4,26 +4,24 @@
 #
 # Dois formatos de versao reconhecidos, cada um checado do jeito certo:
 # - Documento markdown com uma linha "| Versão | X.Y.Z |" na tabela de
-#   cabecalho (todo arquivo de modulos/_template/ e os cinco documentos
-#   de docs/docs-VMODEL-visao-geral/ seguem esse formato).
+#   cabecalho (convencao livre do projeto hospedeiro -- qualquer
+#   arquivo que siga esse formato entra na checagem, nenhum caminho
+#   especifico exigido).
 # - Arquivo *.schema.json com uma chave "schema_version" -- o valor de
-#   verdade costuma morar numa linha "const" logo abaixo da chave
-#   (convencao deste projeto pra fixar o valor exigido, ver PD-IMP-01),
-#   entao a checagem aceita mudanca tanto na linha "schema_version"
-#   quanto numa linha "const" -- sem isso, subir só o valor de "const"
-#   (caso comum, já aconteceu de verdade em
-#   modulos/motor/schemas/pacote-de-conteudo.schema.json) passava pelo
+#   verdade pode morar numa linha "const" logo abaixo da chave (forma
+#   comum de fixar um valor exigido em JSON Schema), entao a checagem
+#   aceita mudanca tanto na linha "schema_version" quanto numa linha
+#   "const" -- sem isso, subir só o valor de "const" passaria pelo
 #   gancho sem aviso nenhum, mesmo sendo mudança de versão real. A
 #   checagem de "schema_version" só entra em arquivos com nome
 #   *.schema.json -- sem essa restrição, qualquer arquivo de código que
-#   apenas cite a string "schema_version" (por exemplo, um `.kt` que lê
-#   esse campo de um JSON, caso real em
-#   modulos/motor/core/.../ContentImport.kt) seria tratado, por engano,
-#   como se fosse ele mesmo um esquema versionado.
+#   apenas cite a string "schema_version" (por exemplo, um programa que
+#   lê esse campo de um JSON) seria tratado, por engano, como se fosse
+#   ele mesmo um esquema versionado.
 #
 # ADR individual (decisions/000N-titulo.md) fica de fora de proposito:
 # nao leva versao propria -- o historico dela e o campo Status
-# (substituido pelo ADR-NNNN), ver modulos/_template/decisions/README.md.
+# (substituido pelo ADR-NNNN).
 
 falhou=0
 
@@ -68,8 +66,8 @@ while IFS= read -r -d '' arquivo; do
         # operador de "ou" -- exatamente o que a tabela markdown precisa.
         # Achado ao vivo: documento que só tem a tabela "Controle de
         # versão" (sem a linha de campo único "| Versão | X.Y.Z |" na
-        # tabela de cabeçalho -- caso de MANUAL.md, que não tem tabela
-        # de cabeçalho nenhuma) nunca passava nesta checagem, mesmo
+        # tabela de cabeçalho -- caso de documento sem tabela de
+        # cabeçalho nenhuma) nunca passava nesta checagem, mesmo
         # subindo a versão de verdade -- porque subir a versão, nesse
         # tipo de documento, é acrescentar uma linha NOVA na tabela
         # (ex.: "| 0.4.0 | ... |"), nunca tocar a linha de cabeçalho da

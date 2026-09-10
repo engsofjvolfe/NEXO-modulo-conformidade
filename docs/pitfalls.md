@@ -4,8 +4,8 @@
 |---|---|
 | Módulo | Conformidade |
 | Documento | Pitfalls |
-| Versão | 0.6.0 |
-| Data | 29-08-2026 |
+| Versão | 0.7.0 |
+| Data | 07-09-2026 |
 | Licença | Todos os direitos reservados — ver [LICENSE](../LICENSE) |
 
 > Comportamento não óbvio de ferramenta/mecanismo usado só neste módulo
@@ -174,6 +174,68 @@ de teste separado (fora da worktree e fora da pasta principal), é o
 caminho que já funciona pra confirmar um gancho nativo de git antes de
 ele estar disponível pra pasta principal de verdade.
 
+### 2026-09-07-arquivos-do-modulo-somem-do-disco-junto-com-a-remocao-do-remoto
+
+*Em resumo:* tirar este módulo do controle de versão remoto (commit
+`3277638`, "Retira o modulo de conformidade e ferramentas internas do
+repositorio remoto") não deixou os arquivos no disco, gitignorados --
+apagou os 28 arquivos de verdade da árvore de trabalho, porque a
+remoção foi feita como exclusão normal de arquivo rastreado (`git rm`
+implícito num commit), não como "parar de rastrear, mantendo o
+arquivo" (`git rm --cached`). Uma sessão que confia só no que existe
+em disco, sem checar o histórico do git antes de concluir que um
+arquivo "nunca existiu" ou "foi perdido de vez", recria do zero algo
+que já existia por completo -- exatamente o que aconteceu com este
+`tasks.md` (recriado na versão `0.1.0`, quando a versão real já estava
+em `0.10.0`, com nove versões de pendências e resoluções perdidas até
+a recuperação).
+
+*Em detalhe técnico:* os 28 arquivos de `modulos/conformidade/` (sete
+de `docs/`, vinte de `decisions/` mais o índice) confirmados ausentes
+do disco por `Glob`/leitura direta, apesar de `HANDOFF.md` (raiz)
+afirmar que esse material "segue existindo e funcionando só neste
+computador". Recuperação: `git ls-tree -r --name-only
+<commit-de-remocao>^ -- modulos/conformidade` pra listar o conteúdo
+completo antes da remoção, seguido de `git show
+<commit-de-remocao>^:<caminho> > <caminho>` por arquivo -- o blob
+continua acessível no histórico do git independente de o arquivo ter
+sido apagado do disco e adicionado ao `.gitignore` depois. Mitigação
+geral: antes de recriar do zero qualquer arquivo deste módulo (ou de
+qualquer material local-only citado como "existente" em documentação),
+checar `git log --all -- <caminho>` primeiro -- reconstruir de memória
+ou do zero descarta histórico real que ainda está recuperável.
+
+### 2026-09-07-arquivos-do-modulo-somem-do-disco-junto-com-a-remocao-do-remoto
+
+*Em resumo:* tirar este módulo do controle de versão remoto (commit
+`3277638`, "Retira o modulo de conformidade e ferramentas internas do
+repositorio remoto") não deixou os arquivos no disco, gitignorados --
+apagou os 28 arquivos de verdade da árvore de trabalho, porque a
+remoção foi feita como exclusão normal de arquivo rastreado (`git rm`
+implícito num commit), não como "parar de rastrear, mantendo o
+arquivo" (`git rm --cached`). Uma sessão que confia só no que existe
+em disco, sem checar o histórico do git antes de concluir que um
+arquivo "nunca existiu" ou "foi perdido de vez", recria do zero algo
+que já existia por completo -- exatamente o que aconteceu com este
+`tasks.md` (recriado na versão `0.1.0`, quando a versão real já estava
+em `0.10.0`, com nove versões de pendências e resoluções perdidas até
+a recuperação).
+
+*Em detalhe técnico:* os 28 arquivos de `modulos/conformidade/` (sete
+de `docs/`, vinte de `decisions/` mais o índice) confirmados ausentes
+do disco por `Glob`/leitura direta, apesar de `HANDOFF.md` (raiz)
+afirmar que esse material "segue existindo e funcionando só neste
+computador". Recuperação: `git ls-tree -r --name-only
+<commit-de-remocao>^ -- modulos/conformidade` pra listar o conteúdo
+completo antes da remoção, seguido de `git show
+<commit-de-remocao>^:<caminho> > <caminho>` por arquivo -- o blob
+continua acessível no histórico do git independente de o arquivo ter
+sido apagado do disco e adicionado ao `.gitignore` depois. Mitigação
+geral: antes de recriar do zero qualquer arquivo deste módulo (ou de
+qualquer material local-only citado como "existente" em documentação),
+checar `git log --all -- <caminho>` primeiro -- reconstruir de memória
+ou do zero descarta histórico real que ainda está recuperável.
+
 ## Controle de versão
 
 | Versão | Data | Alteração | Origem da alteração |
@@ -184,3 +246,7 @@ ele estar disponível pra pasta principal de verdade.
 | 0.4.0 | 28-08-2026 | Armadilha nova registrada (`grep -P` exige locale UTF-8 neste ambiente, e não pode ser combinado com `-E`). | Resolução de [decisions/0014](<../decisions/0014-remocao-dos-ganchos-tipo-agent-substituidos-por-script-mais-confirmacao.md>) |
 | 0.5.0 | 29-08-2026 | Armadilha nova registrada (nome de variável própria colidindo com variável especial do Bash, `BASH_COMMAND`). | Correção de falsos bloqueios reportados de outra sessão + pedido de janela de frescor maior |
 | 0.6.0 | 29-08-2026 | Armadilha nova registrada (`core.hooksPath` aponta pra pasta principal, não pra worktree -- gancho nativo do git editado numa worktree só é validado ao vivo depois do merge). | Resolução de [decisions/0019](<../decisions/0019-deteccao-de-versao-subida-em-documento-so-com-changelog.md>) |
+| 0.7.0 | 10-09-2026 | Armadilha nova registrada (`.cwd` do gancho não acompanha `cd` escrito dentro do próprio comando -- só `EnterWorktree` move a sessão de verdade). | Reprodução ao vivo do relato de `pre_git_rules.sh` bloqueando commit legítimo numa worktree |
+| 0.7.0 | 07-09-2026 | Armadilha nova registrada (remoção do módulo do remoto apagou os arquivos de verdade da árvore de trabalho, não só do controle de versão -- recuperados do histórico do git). | Recuperação do módulo, ausente do disco desde a remoção em `3277638` |
+| 0.7.0 | 10-09-2026 | Armadilha nova registrada (`.cwd` do gancho não acompanha `cd` escrito dentro do próprio comando -- só `EnterWorktree` move a sessão de verdade). | Reprodução ao vivo do relato de `pre_git_rules.sh` bloqueando commit legítimo numa worktree |
+| 0.7.0 | 07-09-2026 | Armadilha nova registrada (remoção do módulo do remoto apagou os arquivos de verdade da árvore de trabalho, não só do controle de versão -- recuperados do histórico do git). | Recuperação do módulo, ausente do disco desde a remoção em `3277638` |

@@ -17,7 +17,7 @@ fi
 
 # 1) Reescrever histórico em develop/main -- NUNCA tem chave, sem exceção
 if [[ "$BRANCH" == "develop" || "$BRANCH" == "main" ]] && $IS_REWRITE; then
-  block "Bloqueado: reescrever histórico não é permitido em develop/main, sem exceção -- não há AUTORIZO-TRAVA que libere isso."
+  block "reescrita de histórico" "reescrever histórico não é permitido em develop/main, sem exceção -- não há AUTORIZO-TRAVA que libere isso."
 fi
 
 # 1b) Commit novo direto em develop/main -- NUNCA tem chave, sem exceção.
@@ -43,13 +43,13 @@ GIT_DIR=$(git -C "$CWD" rev-parse --git-dir 2>/dev/null)
 MERGE_EM_ANDAMENTO=false
 [[ -n "$GIT_DIR" && -f "$GIT_DIR/MERGE_HEAD" ]] && MERGE_EM_ANDAMENTO=true
 if [[ "$BRANCH" == "develop" || "$BRANCH" == "main" ]] && echo "$COMMAND" | grep -Eq '\bgit[[:space:]]+commit\b' && ! echo "$COMMAND" | grep -Eq '\bgit[[:space:]]+merge\b' && ! $MERGE_EM_ANDAMENTO; then
-  block "Bloqueado: commit novo direto em $BRANCH não é permitido, sem exceção -- todo trabalho nasce numa branch de tarefa, numa worktree própria (ver regras gerais do projeto, secao Trabalho em multiplas frentes). $BRANCH só recebe conteúdo por 'git merge --no-ff', nunca por 'git commit' direto."
+  block "commit direto em develop/main" "commit novo direto em $BRANCH não é permitido, sem exceção -- todo trabalho nasce numa branch de tarefa, numa worktree própria (ver regras gerais do projeto, secao Trabalho em multiplas frentes). $BRANCH só recebe conteúdo por 'git merge --no-ff', nunca por 'git commit' direto."
 fi
 
 # 2) Merge sem --no-ff -- sem chave, é trivial de corrigir direto
 if [[ "$BRANCH" == "develop" ]] && echo "$COMMAND" | grep -Eq '\bgit[[:space:]]+merge\b'; then
   if ! echo "$COMMAND" | grep -q -- '--no-ff'; then
-    block "Bloqueado: merge em develop sempre usa --no-ff. Só adicionar a flag, não precisa de autorização."
+    block "merge sem --no-ff" "merge em develop sempre usa --no-ff. Só adicionar a flag, não precisa de autorização."
   fi
 fi
 
@@ -57,7 +57,7 @@ fi
 # julgamento: gh pr view devolve isso com certeza depois de criado.
 if echo "$COMMAND" | grep -Eq '\bgh[[:space:]]+pr[[:space:]]+create\b'; then
   if echo "$COMMAND" | grep -Eq '\-\-base[[:space:]]+main\b'; then
-    block "Bloqueado: PR nunca vai direto pra main, sempre pra develop."
+    block "PR com base errada" "PR nunca vai direto pra main, sempre pra develop."
   fi
 fi
 
@@ -82,14 +82,14 @@ fi
 # 4) Investigar antes de reescrever (qualquer branch)
 if $IS_REWRITE && [[ -f "$TRANSCRIPT" ]]; then
   if ! grep -Eq 'git log|git reflog|git ls-remote|git fetch' "$TRANSCRIPT"; then
-    block "Bloqueado: antes de reescrever histórico, confira o estado real primeiro (git log, git reflog, git ls-remote ou git fetch). Se já conferiu de outro jeito, use AUTORIZO-TRAVA: <motivo>."
+    block "investigar antes de reescrever" "antes de reescrever histórico, confira o estado real primeiro (git log, git reflog, git ls-remote ou git fetch). Se já conferiu de outro jeito, use AUTORIZO-TRAVA: <motivo>."
   fi
 fi
 
 # 5) Trocar de branch fora de worktree
 if echo "$COMMAND" | grep -Eq '\bgit[[:space:]]+(checkout|switch)\b' && [[ "$CWD" != *"/.claude/worktrees/"* ]]; then
   if ! echo "$COMMAND" | grep -Eq '\bcheckout\b.*--[[:space:]]'; then
-    block "Bloqueado: trocar de branch fora de uma worktree. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
+    block "branch fora de worktree" "trocar de branch fora de uma worktree. Se isso for engano, use AUTORIZO-TRAVA: <motivo>."
   fi
 fi
 
@@ -104,7 +104,7 @@ if [[ "$BRANCH" == "develop" ]] && echo "$COMMAND" | grep -Eq '\bgit[[:space:]]+
   if [[ -n "$MERGE_TARGET" ]]; then
     PR_COUNT=$(gh pr list --state all --head "$MERGE_TARGET" --json number 2>/dev/null | jq 'length' 2>/dev/null)
     if [[ "${PR_COUNT:-0}" -eq 0 ]]; then
-      block "Bloqueado: nenhum PR (aberto, fechado ou mesclado) encontrado com origem no branch '$MERGE_TARGET' -- CLAUDE.md exige PR sempre antes de mesclar em develop, nunca merge direto. Se isso for engano (gh não autenticado, PR criado por outro caminho), use AUTORIZO-TRAVA: <motivo>."
+      block "merge sem PR" "nenhum PR (aberto, fechado ou mesclado) encontrado com origem no branch '$MERGE_TARGET' -- CLAUDE.md exige PR sempre antes de mesclar em develop, nunca merge direto. Se isso for engano (gh não autenticado, PR criado por outro caminho), use AUTORIZO-TRAVA: <motivo>."
     fi
   fi
 fi

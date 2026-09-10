@@ -1,11 +1,21 @@
-# NEXO — Módulo de Conformidade
+# Módulo de Conformidade
 
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow) ![Fase](https://img.shields.io/badge/fase-implementa%C3%A7%C3%A3o-blue) ![Licença](https://img.shields.io/badge/licença-todos%20os%20direitos%20reservados-red)
 
-Uma tentativa de reduzir o risco de esquecer as regras do projeto NEXO
-durante a própria construção dele.
+Uma tentativa de reduzir o risco de esquecer as regras escritas de um
+projeto de software durante a própria construção dele.
 
-Não é garantia de que isso nunca vai acontecer.
+Não é garantia de que isso nunca vai acontecer. E não é específico de
+um projeto -- nenhum arquivo aqui dentro sabe o nome de nenhum projeto
+que venha a usá-lo (ver [Sobre este projeto](#sobre-este-projeto)
+e [`COMO-USAR.md`](COMO-USAR.md) pra instalar em outro projeto).
+
+Feito especificamente pro Claude Code (a ferramenta de IA da
+Anthropic) -- os mecanismos de trava usam o sistema de "ganchos" que
+só essa ferramenta reconhece. Quem quiser adaptar pra outra ferramenta
+de IA é livre pra fazer isso (ver Licença): os scripts em si são shell
+comum, só o jeito de ligá-los a cada momento do trabalho
+(`.claude/settings.json`) depende do Claude Code.
 
 ## Qual problema ele tenta reduzir
 
@@ -30,10 +40,11 @@ Quem criou este módulo ainda está aprendendo como ele funciona por
 dentro, de verdade. Cada correção registrada em `docs/findings.md` é
 prova disso — não um sinal de que o módulo parou de evoluir.
 
-## Sobre o projeto NEXO
+## Sobre onde este módulo nasceu
 
-Este repositório é um recorte de um módulo do projeto principal,
-[NEXO](https://github.com/engsofjvolfe/NEXO-embriologia).
+Este repositório é um recorte de um módulo do projeto NEXO -- é onde
+ele foi criado e continua sendo usado, mas não é o único projeto que
+pode usá-lo (ver [`COMO-USAR.md`](COMO-USAR.md)).
 
 NEXO é um sistema que ensina processos com etapas — uma cirurgia, uma
 reação química, um evento histórico. Quem aprende reconstrói a ordem
@@ -43,35 +54,19 @@ Este módulo foi publicado à parte porque é uma ferramenta de apoio ao
 *processo* de construir o NEXO. Não faz parte do sistema que a pessoa
 final usa.
 
-## Como usar dentro de um projeto
+## Como usar em outro projeto
 
-Quem tiver autorização de uso deste repositório (ver Licença, abaixo)
-pode copiá-lo pra dentro de qualquer projeto que use o mesmo ambiente
-de programação (VSCode com a extensão Claude Code).
-
-O encaixe é direto: cada pasta daqui vai pro mesmo caminho, contando a
-partir da raiz do outro projeto. `.claude/agents/` deste repositório
-vira `.claude/agents/` lá; `.claude/hooks/` vira `.claude/hooks/`, e
-assim por diante — sem precisar mudar nada dentro dos arquivos.
-
-| Pasta ou arquivo aqui | O que é, em linguagem simples |
-|---|---|
-| `.claude/agents/` | Assistentes de revisão de código, chamados só quando pedido. |
-| `.claude/hooks/` | As travas automáticas em si. |
-| `.claude/settings.json` | Liga cada trava ao momento certo do trabalho. |
-| `.claude/skills/` | Atalhos de comando, como `/revisar-pr`. |
-| `scripts/` | As mesmas travas, do lado do `git` nativo. |
-| `MANUAL.md` | Índice cruzando cada regra do projeto com a trava real que a aplica. |
-| `.vale.ini`, `.vale/` | Configuração opcional de estilo de prosa. |
+Ver [`COMO-USAR.md`](COMO-USAR.md) -- guia de instalação, o que cada
+projeto precisa configurar (opcional), e o que fica de fora por
+depender de dado específico de cada projeto.
 
 ## Como funciona, em linguagem simples
 
-O projeto NEXO conta com o apoio de uma inteligência artificial
-durante a própria construção. No caso deste módulo, o ambiente VSCode
-com a extensão Claude Code.
-
-Essa extensão dá à inteligência artificial acesso direto aos arquivos
-do projeto, ao histórico de versões e à capacidade de rodar comandos.
+Este módulo trabalha junto de uma inteligência artificial durante a
+própria construção do projeto que o usa -- no caso do Claude Code
+(ver [Pré-requisito](<COMO-USAR.md#pré-requisito>)), o ambiente dá à
+inteligência artificial acesso direto aos arquivos do projeto, ao
+histórico de versões e à capacidade de rodar comandos.
 
 Quem desenvolve o projeto escreve a documentação e decide cada coisa.
 A inteligência artificial entra depois, conferindo se cada regra foi
